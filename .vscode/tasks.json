@@ -1,0 +1,58 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PIO: Build (bluepill)",
+      "type": "shell",
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "bluepill_f103c8_128k"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "PIO: Upload (HID)",
+      "type": "shell",
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "bluepill_f103c8_128k",
+        "-t",
+        "upload"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "PIO: Clean",
+      "type": "shell",
+      "command": "pio",
+      "args": [
+        "run",
+        "-e",
+        "bluepill_f103c8_128k",
+        "-t",
+        "clean"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "PIO: Monitor (115200)",
+      "type": "shell",
+      "command": "pio",
+      "args": [
+        "device",
+        "monitor",
+        "--baud",
+        "115200"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
