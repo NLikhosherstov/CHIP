@@ -2,10 +2,12 @@
     "clangd.arguments": [
         "--compile-commands-dir=${workspaceFolder}",
         "--query-driver=C:/Users/lne-nb/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-*",
-        "--compile-commands-dir=${workspaceFolder}",
-        "--query-driver=C:/Users/lne-nb/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-*",
-        "--extra-arg=-D__GNUC__=10",
-        "--extra-arg=-D__GNUC_MINOR__=3",
-        "--extra-arg=-D__GNUC_PATCHLEVEL__=1"
-    ]
+    ],
+    "editor.inlayHints.enabled": "off",
+    "scm.diffDecorations": "none",
+    "explorer.decorations.badges": false,
+    "explorer.decorations.colors": false,
+    "workbench.editor.decorations.badges": false,
+    "workbench.editor.decorations.colors": false,
+    "markdown.validate.enabled": true
 }

@@ -13,5 +13,5 @@ public:
   void backlightOff();
 
 private:
-  TFT_eSPI* tft_;
+  TFT_eSPI* m_tft;
 };

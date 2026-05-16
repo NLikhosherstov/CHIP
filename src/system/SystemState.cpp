@@ -1,0 +1,104 @@
+#include "system/SystemState.h"
+
+namespace {
+template <typename T>
+T clampValue(T value, T min_value, T max_value) {
+  if (value < min_value) {
+    return min_value;
+  }
+  if (value > max_value) {
+    return max_value;
+  }
+  return value;
+}
+}  // namespace
+
+SystemState::HeatExchangerState SystemState::getHeatExchangerState() const {
+  noInterrupts();
+  const HeatExchangerState state = m_heat_exchanger_state;
+  interrupts();
+  return state;
+}
+
+SystemState::RoomClimateState SystemState::getRoomClimateState() const {
+  noInterrupts();
+  const RoomClimateState state = m_room_climate_state;
+  interrupts();
+  return state;
+}
+
+SystemState::IgnitorState SystemState::getIgnitorState() const {
+  noInterrupts();
+  const IgnitorState state = m_ignitor_state;
+  interrupts();
+  return state;
+}
+
+SystemState::PumpState SystemState::getPumpState() const {
+  noInterrupts();
+  const PumpState state = m_pump_state;
+  interrupts();
+  return state;
+}
+
+SystemState::MotorState SystemState::getMotorState() const {
+  noInterrupts();
+  const MotorState state = m_motor_state;
+  interrupts();
+  return state;
+}
+
+SystemState::AutomationState SystemState::getAutomationState() const {
+  noInterrupts();
+  const AutomationState state = m_automation_state;
+  interrupts();
+  return state;
+}
+
+void SystemState::setHeatExchangerState(float temperature_c, bool valid, uint32_t updated_at_ms) {
+  noInterrupts();
+  m_heat_exchanger_state.temperature_c = temperature_c;
+  m_heat_exchanger_state.valid = valid;
+  m_heat_exchanger_state.updated_at_ms = updated_at_ms;
+  interrupts();
+}
+
+void SystemState::setRoomClimateState(float temperature_c, float humidity_percent, bool valid, uint32_t updated_at_ms) {
+  noInterrupts();
+  m_room_climate_state.temperature_c = temperature_c;
+  m_room_climate_state.humidity_percent = clampValue(humidity_percent, 0.0F, 100.0F);
+  m_room_climate_state.valid = valid;
+  m_room_climate_state.updated_at_ms = updated_at_ms;
+  interrupts();
+}
+
+void SystemState::setIgnitorState(bool enabled, uint8_t pwm_percent, uint32_t timeout_deadline_ms) {
+  noInterrupts();
+  m_ignitor_state.enabled = enabled;
+  m_ignitor_state.pwm_percent = clampValue<uint8_t>(pwm_percent, 0, 100);
+  m_ignitor_state.timeout_deadline_ms = timeout_deadline_ms;
+  interrupts();
+}
+
+void SystemState::setPumpState(bool enabled, uint8_t speed_index, uint16_t pulse_hz) {
+  noInterrupts();
+  m_pump_state.enabled = enabled;
+  m_pump_state.speed_index = speed_index;
+  m_pump_state.pulse_hz = pulse_hz;
+  interrupts();
+}
+
+void SystemState::setMotorState(bool enabled, uint8_t speed_index, uint16_t pwm_duty_permille, uint32_t pwm_frequency_hz) {
+  noInterrupts();
+  m_motor_state.enabled = enabled;
+  m_motor_state.speed_index = speed_index;
+  m_motor_state.pwm_duty_permille = clampValue<uint16_t>(pwm_duty_permille, 0, 1000);
+  m_motor_state.pwm_frequency_hz = pwm_frequency_hz;
+  interrupts();
+}
+
+void SystemState::setAutomationState(AutomationState state) {
+  noInterrupts();
+  m_automation_state = state;
+  interrupts();
+}
