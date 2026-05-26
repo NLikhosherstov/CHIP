@@ -1,32 +1,33 @@
 #pragma once
 
+#include "PinNames.h"
 #include <Arduino.h>
 
 
 namespace pin{
 
 // Display
-constexpr uint8_t DISPLAY_LIGHT = PB10;
+constexpr PinName DISPLAY_LIGHT = PB_1;
 
 // Encoder (ENC)
-constexpr uint8_t ENC_S1 = PB8;   // Pin 4
-constexpr uint8_t ENC_S2 = PB9;   // Pin 3
-constexpr uint8_t ENC_KEY = PB7;  // Pin 2
+constexpr PinName ENC_S1 = PB_8;   // Pin 4
+constexpr PinName ENC_S2 = PB_9;   // Pin 3
+constexpr PinName ENC_KEY = PB_7;  // Pin 2
 
 // Keyboard (KBD)
-constexpr uint8_t KBD_OUT = PB0;  // Analog keyboard input
+constexpr PinName KBD_OUT = PB_0;  // Analog keyboard input
 
 // Temperature/humidity sensor (DHT)
-constexpr uint8_t DHT_DATA = PB11;  // Pin 2
+constexpr PinName DHT_DATA = PA_6;  // Pin 2
 
 // Heat exchanger temperature sensor (MAX31855)
-constexpr uint8_t MAX_CS = PB12;   // Pin 5
-constexpr uint8_t MAX_CLK = PB13;  // Pin 6
-constexpr uint8_t MAX_DO = PB14;   // Pin 4
+constexpr PinName MAX_CS = PB_12;   // Pin 5
+constexpr PinName MAX_CLK = PB_13;  // Pin 6
+constexpr PinName MAX_DO = PB_14;   // Pin 4
 
 // Actuators
-constexpr uint8_t MOTOR = PA8;    // Motor control
-constexpr uint8_t IGNITOR = PA9;  // Ignitor control
-constexpr uint8_t PUMP  = PA10;   // Fuel pump control
+constexpr PinName MOTOR = PA_8;    // Motor control
+constexpr PinName IGNITOR = PA_9;  // Ignitor control
+constexpr PinName PUMP  = PA_10;   // Fuel pump control
 
 }

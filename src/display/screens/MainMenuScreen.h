@@ -24,6 +24,11 @@ public:
     void selectPrev();
     void adjustValue(int8_t delta, ConfigManager& cfg);
 
+    // Перерисовка после навигации/правки из DisplayManager.
+    void refresh(TFT_eSPI& tft, const ConfigManager& cfg);
+
+    uint8_t selectedItem() const { return m_selectedItem; }
+
 private:
     uint8_t m_selectedItem = 0;
 

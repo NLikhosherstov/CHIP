@@ -3,8 +3,6 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <stdio.h>
-#include <math.h>
-
 #include "display/PaletteRGB565.h"
 #include "display/assets/fonts.h"
 #include "display/widgets/CoreWidget.h"
@@ -38,9 +36,9 @@ static const char* const QM_LABELS[HomeScreen::QM_ITEM_COUNT] = {
 
 HomeScreen::HomeScreen()
     : m_lastState(SystemState::AutomationState::STATE_IDLE)
-    , m_lastHexTemp(-999.f)
-    , m_lastRoomTemp(-999.f)
-    , m_lastHumidity(-999.f)
+    , m_lastHexDisplay(-999)
+    , m_lastRoomDisplay(-999)
+    , m_lastHumDisplay(-999)
     , m_lastSpeedIndex(0xFF)
     , m_lastTimerSec(0xFFFFu)
     , m_lastPulseHz(0xFFFFu)
@@ -57,12 +55,14 @@ void HomeScreen::onEnter(TFT_eSPI& tft,
                           const ConfigManager& cfg) {
     m_fullRedrawNeeded = true;
     m_qmVisible = false;
+    CoreWidget::initHexSprite(tft);
     drawAll(tft, state, cfg);
 }
 
 void HomeScreen::onExit() {
     m_qmVisible = false;
     m_fullRedrawNeeded = true;
+    CoreWidget::releaseHexSprite();
 }
 
 void HomeScreen::tick(TFT_eSPI& tft,
@@ -95,9 +95,11 @@ void HomeScreen::tick(TFT_eSPI& tft,
 
 void HomeScreen::showQuickMenu(TFT_eSPI& tft,
                                 const SystemState& state,
-                                const ConfigManager& cfg) {
+                                const ConfigManager& cfg,
+                                uint8_t default_item) {
     m_qmVisible = true;
-    m_qmSelectedItem = 0;
+    // default_item: 0 при «Вверх», 3 при «Вниз» (с учётом сдвига в DisplayManager).
+    m_qmSelectedItem = (default_item < QM_ITEM_COUNT) ? default_item : 0;
     m_qmLastActivityMs = millis();
     drawQuickMenuOverlay(tft, state, cfg);
 }
@@ -115,7 +117,12 @@ void HomeScreen::quickMenuSelectNext(TFT_eSPI& tft,
                                       const SystemState& state,
                                       const ConfigManager& cfg) {
     if (!m_qmVisible) return;
-    m_qmSelectedItem = (m_qmSelectedItem + 1) % QM_ITEM_COUNT;
+    // Пропуск пункта «Режим» (индекс 2), если не в ручном режиме.
+    const bool show_mode =
+        (state.getAutomationState() == SystemState::AutomationState::STATE_MANUAL);
+    do {
+        m_qmSelectedItem = static_cast<uint8_t>((m_qmSelectedItem + 1) % QM_ITEM_COUNT);
+    } while (!show_mode && m_qmSelectedItem == 2);
     m_qmLastActivityMs = millis();
     drawQuickMenuOverlay(tft, state, cfg);
 }
@@ -124,7 +131,12 @@ void HomeScreen::quickMenuSelectPrev(TFT_eSPI& tft,
                                       const SystemState& state,
                                       const ConfigManager& cfg) {
     if (!m_qmVisible) return;
-    m_qmSelectedItem = (m_qmSelectedItem == 0) ? (QM_ITEM_COUNT - 1) : (m_qmSelectedItem - 1);
+    const bool show_mode =
+        (state.getAutomationState() == SystemState::AutomationState::STATE_MANUAL);
+    do {
+        m_qmSelectedItem = (m_qmSelectedItem == 0) ? static_cast<uint8_t>(QM_ITEM_COUNT - 1)
+                                                   : static_cast<uint8_t>(m_qmSelectedItem - 1);
+    } while (!show_mode && m_qmSelectedItem == 2);
     m_qmLastActivityMs = millis();
     drawQuickMenuOverlay(tft, state, cfg);
 }
@@ -154,8 +166,10 @@ void HomeScreen::quickMenuAdjust(TFT_eSPI& tft,
             changed = true;
             break;
         }
-        case 2: // Режим AUTO/РУ — изменяется через AutomationController, не через дисплей
-            // TODO: добавить callback для смены режима
+        case 2: // Режим AUTO: запрос в AutomationController (без прямой связи с UI)
+            if (state.getAutomationState() == SystemState::AutomationState::STATE_MANUAL) {
+                state.postEnterAutoRequest();
+            }
             break;
         case 3: // "Меню" — переключение на MainMenuScreen обрабатывается в DisplayManager
             break;
@@ -217,23 +231,27 @@ void HomeScreen::updateDirtyWidgets(TFT_eSPI& tft,
     // CoreWidget находится под оверлеем Быстрого меню — не перерисовываем
     // фон пока меню открыто, чтобы не было мерцания сквозь overlay.
     if (!m_qmVisible) {
-        if (fabsf(hex.temperature_c - m_lastHexTemp) > 0.5f) {
+        const int16_t hexDisplay = static_cast<int16_t>(hex.temperature_c);
+        if (hexDisplay != m_lastHexDisplay) {
             CoreWidget::updateHexTemp(tft, hex.temperature_c, pal);
-            m_lastHexTemp = hex.temperature_c;
+            m_lastHexDisplay = hexDisplay;
         }
-        if (fabsf(room.temperature_c - m_lastRoomTemp) > 0.5f) {
+
+        const int16_t roomDisplay = static_cast<int16_t>(room.temperature_c);
+        if (roomDisplay != m_lastRoomDisplay) {
             CoreWidget::updateRoomTemp(tft, room.temperature_c, pal);
-            m_lastRoomTemp = room.temperature_c;
+            m_lastRoomDisplay = roomDisplay;
         }
-        if (fabsf(room.humidity_percent - m_lastHumidity) > 0.5f) {
+
+        const int16_t humDisplay = static_cast<int16_t>(room.humidity_percent);
+        if (humDisplay != m_lastHumDisplay) {
             CoreWidget::updateHumidity(tft, room.humidity_percent, pal);
-            m_lastHumidity = room.humidity_percent;
+            m_lastHumDisplay = humDisplay;
         }
     } else {
-        // Обновляем кеш без отрисовки — чтобы при закрытии меню данные были свежими
-        m_lastHexTemp  = hex.temperature_c;
-        m_lastRoomTemp = room.temperature_c;
-        m_lastHumidity = room.humidity_percent;
+        m_lastHexDisplay  = static_cast<int16_t>(hex.temperature_c);
+        m_lastRoomDisplay = static_cast<int16_t>(room.temperature_c);
+        m_lastHumDisplay  = static_cast<int16_t>(room.humidity_percent);
     }
 
     if (mtr.speed_index != m_lastSpeedIndex) {
@@ -242,8 +260,12 @@ void HomeScreen::updateDirtyWidgets(TFT_eSPI& tft,
     }
 
     if (pump.pulse_hz != m_lastPulseHz || pump.enabled != m_lastPumpActive) {
-        PumpWidget::draw(tft, pump.pulse_hz, pump.enabled, pal);
-        m_lastPulseHz   = pump.pulse_hz;
+        if (pump.enabled != m_lastPumpActive) {
+            PumpWidget::draw(tft, pump.pulse_hz, pump.enabled, pal);
+        } else {
+            PumpWidget::updateFlow(tft, pump.pulse_hz, pal);
+        }
+        m_lastPulseHz    = pump.pulse_hz;
         m_lastPumpActive = pump.enabled;
     }
 
@@ -265,9 +287,9 @@ void HomeScreen::resetDirtyCache(const SystemState& state, const ConfigManager& 
     const auto ign  = state.getIgnitorState();
 
     m_lastState      = state.getAutomationState();
-    m_lastHexTemp    = hex.temperature_c;
-    m_lastRoomTemp   = room.temperature_c;
-    m_lastHumidity   = room.humidity_percent;
+    m_lastHexDisplay  = static_cast<int16_t>(hex.temperature_c);
+    m_lastRoomDisplay = static_cast<int16_t>(room.temperature_c);
+    m_lastHumDisplay  = static_cast<int16_t>(room.humidity_percent);
     m_lastSpeedIndex = mtr.speed_index;
     m_lastPulseHz    = pump.pulse_hz;
     m_lastPumpActive = pump.enabled;

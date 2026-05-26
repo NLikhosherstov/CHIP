@@ -1,17 +1,16 @@
 #pragma once
 #include <stdint.h>
 
+#include "display/UiInput.h"
+#include "system/ConfigManager.h"
+
 class TFT_eSPI;
 class SystemState;
-class ConfigManager;
 class BaseScreen;
 class HomeScreen;
 class MainMenuScreen;
 
-// Главный контроллер дисплея.
-// Владеет объектом TFT_eSPI и управляет активным экраном.
-// Экранов всего два: HOME (главный) и MAIN_MENU (меню настроек).
-// Быстрое меню является модальным виджетом ВНУТРИ HomeScreen, а не отдельным экраном.
+// Главный контроллер дисплея и интерпретатор семантического ввода (UiInput).
 class DisplayManager {
 public:
     enum class ScreenId : uint8_t {
@@ -22,44 +21,50 @@ public:
     DisplayManager();
     ~DisplayManager();
 
-    // Инициализация TFT_eSPI, установка ориентации, полный сброс экрана.
     void begin(const SystemState& state, const ConfigManager& cfg);
-
-    // Вызывается каждую итерацию главного цикла.
-    // Делегирует в tick() активного экрана.
     void tick(const SystemState& state, const ConfigManager& cfg);
 
-    // Переключение активного экрана.
-    // Вызывает onExit() на текущем и onEnter() на следующем.
     void switchTo(ScreenId id, const SystemState& state, const ConfigManager& cfg);
 
     ScreenId currentScreen() const;
 
-    // Управление подсветкой
     void backlightOn();
     void backlightOff();
 
-    // Делегаты управления Быстрым меню (HomeScreen)
-    // Открывает/закрывает оверлей быстрого меню поверх главного экрана.
-    void showQuickMenu(const SystemState& state, const ConfigManager& cfg);
-    void hideQuickMenu(const SystemState& state, const ConfigManager& cfg);
-
-    // Навигация по пунктам быстрого меню.
-    void quickMenuSelectNext(const SystemState& state, const ConfigManager& cfg);
-    void quickMenuSelectPrev(const SystemState& state, const ConfigManager& cfg);
-
-    // Изменение значения выбранного пункта. delta = +1 или -1.
-    void quickMenuAdjust(int8_t delta, SystemState& state, ConfigManager& cfg);
-
+    // Быстрое меню или экран настроек — весь ввод через handleUiInput.
+    bool isMenuActive() const;
     bool isQuickMenuVisible() const;
 
+    void handleUiInput(UiInput action,
+                       int16_t payload,
+                       SystemState& state,
+                       ConfigManager& cfg);
+
 private:
+    void handleUiInput_Home(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
+    void handleUiInput_QuickMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
+    void handleUiInput_MainMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
+
+    void openQuickMenu(uint8_t default_item, const SystemState& state, const ConfigManager& cfg);
+    void closeQuickMenu(const SystemState& state, const ConfigManager& cfg);
+    void openMainMenu(const SystemState& state, const ConfigManager& cfg);
+
+    void adjustSelectedItem(int8_t delta, SystemState& state, ConfigManager& cfg);
+    void applyClickToSelectedItem(SystemState& state, ConfigManager& cfg);
+
+    void exitMainMenuSave(ConfigManager& cfg, const SystemState& state);
+    void exitMainMenuDiscard(ConfigManager& cfg, const SystemState& state);
+
+    bool isQuickMenuModeItemVisible(const SystemState& state) const;
+
     TFT_eSPI*      m_tft;
-    BaseScreen*    m_active; // Не владеющий указатель на один из экранов
+    BaseScreen*    m_active;
     ScreenId       m_currentId;
 
-    // Экземпляры экранов — статические объекты (без динамической аллокации).
-    // В каждый момент активен только один
     HomeScreen*     m_homeScreen;
     MainMenuScreen* m_mainMenuScreen;
+
+    ConfigManager::Config m_mainMenuEdit{};      // черновик правок в MAIN_MENU
+    ConfigManager::Config m_mainMenuSnapshot{};  // снимок при входе в меню
+    bool m_mainMenuEditActive;
 };

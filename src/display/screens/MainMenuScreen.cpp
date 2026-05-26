@@ -56,6 +56,10 @@ void MainMenuScreen::selectPrev() {
     if (m_selectedItem > 0) --m_selectedItem;
 }
 
+void MainMenuScreen::refresh(TFT_eSPI& tft, const ConfigManager& cfg) {
+    drawAll(tft, cfg);
+}
+
 void MainMenuScreen::adjustValue(int8_t delta, ConfigManager& cfg) {
     ConfigManager::Config conf = cfg.getConfig();
     switch (m_selectedItem) {

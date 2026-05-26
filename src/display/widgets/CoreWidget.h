@@ -33,6 +33,10 @@ struct CoreWidget {
     static constexpr int16_t ICON_TEMP_X   = 109, ICON_TEMP_Y   = 42;  // 24x24
     static constexpr int16_t ICON_HUM_X    = 110, ICON_HUM_Y    = 163; // 18x25
 
+    // Спрайт для атомарной отрисовки крупной температуры
+    static constexpr int16_t HEX_SPRITE_W = 100;
+    static constexpr int16_t HEX_SPRITE_H = 51;
+
     // Полная отрисовка кольца и содержимого (вызывается при смене режима/первом входе)
     static void drawAll(TFT_eSPI& tft,
                         float hexTemp_c,
@@ -40,14 +44,23 @@ struct CoreWidget {
                         float humidity_pct,
                         const PaletteRGB565& pal);
 
+    // Подготовка спрайта hex (HomeScreen::onEnter). Безопасно вызывать повторно.
+    static void initHexSprite(TFT_eSPI& tft);
+    static void releaseHexSprite();
+
+    // Сброс кеша отрисованных строк (перед полной перерисовкой)
+    static void resetDrawCache();
+
     // Частичные обновления отдельных полей (вызываются при изменении значения)
     static void updateHexTemp (TFT_eSPI& tft, float temp_c,    const PaletteRGB565& pal);
     static void updateRoomTemp(TFT_eSPI& tft, float temp_c,    const PaletteRGB565& pal);
     static void updateHumidity(TFT_eSPI& tft, float humidity,  const PaletteRGB565& pal);
 
 private:
-    static void drawRing   (TFT_eSPI& tft, const PaletteRGB565& pal);
-    static void drawHexText(TFT_eSPI& tft, float temp_c,   const PaletteRGB565& pal);
-    static void drawRoomText(TFT_eSPI& tft, float temp_c,  const PaletteRGB565& pal);
-    static void drawHumText(TFT_eSPI& tft, float humidity, const PaletteRGB565& pal);
+    static void drawRing      (TFT_eSPI& tft, const PaletteRGB565& pal);
+    static void drawRoomIcons (TFT_eSPI& tft, const PaletteRGB565& pal);
+    static void drawHumIcons  (TFT_eSPI& tft, const PaletteRGB565& pal);
+    static void drawHexText   (TFT_eSPI& tft, float temp_c,   const PaletteRGB565& pal);
+    static void drawRoomText  (TFT_eSPI& tft, float temp_c,   const PaletteRGB565& pal);
+    static void drawHumText   (TFT_eSPI& tft, float humidity, const PaletteRGB565& pal);
 };

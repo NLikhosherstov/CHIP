@@ -55,10 +55,16 @@ SystemState::AutomationState SystemState::getAutomationState() const {
   return state;
 }
 
-void SystemState::setHeatExchangerState(float temperature_c, bool valid, uint32_t updated_at_ms) {
+void SystemState::setHeatExchangerState(float temperature_c,
+                                        float temp_rate_c_per_s,
+                                        bool valid,
+                                        uint8_t fault_flags,
+                                        uint32_t updated_at_ms) {
   noInterrupts();
   m_heat_exchanger_state.temperature_c = temperature_c;
+  m_heat_exchanger_state.temp_rate_c_per_s = temp_rate_c_per_s;
   m_heat_exchanger_state.valid = valid;
+  m_heat_exchanger_state.fault_flags = fault_flags;
   m_heat_exchanger_state.updated_at_ms = updated_at_ms;
   interrupts();
 }
@@ -100,5 +106,44 @@ void SystemState::setMotorState(bool enabled, uint8_t speed_index, uint16_t pwm_
 void SystemState::setAutomationState(AutomationState state) {
   noInterrupts();
   m_automation_state = state;
+  interrupts();
+}
+
+// --- Запросы UI (выставляет DisplayManager, обрабатывает AutomationController) ---
+
+void SystemState::postEnterAutoRequest() {
+  noInterrupts();
+  m_requests.enter_auto = true;
+  interrupts();
+}
+
+void SystemState::postEnterManualRequest() {
+  noInterrupts();
+  m_requests.enter_manual = true;
+  interrupts();
+}
+
+SystemState::SystemRequest SystemState::getRequests() const {
+  noInterrupts();
+  const SystemRequest requests = m_requests;
+  interrupts();
+  return requests;
+}
+
+void SystemState::clearRequestEnterAuto() {
+  noInterrupts();
+  m_requests.enter_auto = false;
+  interrupts();
+}
+
+void SystemState::clearRequestEnterManual() {
+  noInterrupts();
+  m_requests.enter_manual = false;
+  interrupts();
+}
+
+void SystemState::clearAllRequests() {
+  noInterrupts();
+  m_requests = SystemRequest{};
   interrupts();
 }

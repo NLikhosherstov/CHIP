@@ -25,7 +25,7 @@ void ModeWidget::update(TFT_eSPI& tft,
     // Подпись "режим" (мелко, Roboto Mono 12px)
     tft.setFreeFont(Font_RobotoMono_12);
     tft.setTextColor(pal.labelColor, pal.screenBg);
-    tft.drawString("режим", X + 1, Y + 22);
+    tft.drawString("MODE", X + 1, Y + 22);
 
     tft.setTextFont(1);
 }
@@ -37,7 +37,7 @@ const char* ModeWidget::modeName(SystemState::AutomationState state) {
         case SystemState::AutomationState::STATE_IDLE:       return "IDLE";
         case SystemState::AutomationState::STATE_AUTO_START: return "AUTO";
         case SystemState::AutomationState::STATE_AUTO_TSTAT: return "AUTO";
-        case SystemState::AutomationState::STATE_MANUAL:     return "MANU";
+        case SystemState::AutomationState::STATE_MANUAL:     return "MANUAL";
         case SystemState::AutomationState::STATE_STOP:       return "STOP";
         default:                                             return "----";
     }

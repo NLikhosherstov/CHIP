@@ -4,36 +4,59 @@
 #include <stdio.h>
 
 #include "display/PaletteRGB565.h"
+#include "display/WidgetText.h"
 #include "display/assets/fonts.h"
 #include "display/assets/icons.h"
+
+namespace {
+char s_lastFlowBuf[8] = "";
+
+static constexpr int16_t FLOW_VALUE_Y = PumpWidget::Y + 14;
+static constexpr int16_t FLOW_VALUE_H = 21;
+}  // namespace
 
 void PumpWidget::draw(TFT_eSPI& tft,
                       uint16_t pulseHz,
                       bool active,
                       const PaletteRGB565& pal) {
+    s_lastFlowBuf[0] = '\0';
+    tft.startWrite();
     tft.fillRect(X, Y, W, H, pal.screenBg);
-    updateFlow(tft, pulseHz, pal);
+    tft.endWrite();
     drawIcon(tft, active, pal);
+
+    tft.setFreeFont(Font_RobotoMono_12);
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(pal.labelColor, pal.screenBg);
+    tft.startWrite();
+    tft.drawString("L/H", X + 28, Y);
+    tft.endWrite();
+    tft.setTextFont(1);
+
+    updateFlow(tft, pulseHz, pal);
 }
 
 void PumpWidget::updateFlow(TFT_eSPI& tft,
                              uint16_t pulseHz,
                              const PaletteRGB565& pal) {
-    tft.fillRect(X, Y, W, H, pal.screenBg);
-
     char buf[8];
     formatFlow(buf, sizeof(buf), pulseHz);
 
-    // Подпись "л/ч" (мелко, сверху)
-    tft.setFreeFont(Font_RobotoMono_12);
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(pal.labelColor, pal.screenBg);
-    tft.drawString("\xEB/\xF7", X + 28, Y);  // "л/ч" в Win-1251; при UTF-8 — поменять на u8"л/ч"
+    if (!WidgetText::textChanged(buf, s_lastFlowBuf, sizeof(s_lastFlowBuf))) {
+        return;
+    }
 
-    // Значение расхода (крупно, снизу)
     tft.setFreeFont(Font_Aldrich_24);
+    const int16_t textW = tft.textWidth(buf);
+    const int16_t clearX = X;
+    const int16_t clearW = (textW + 4 > W) ? W : (textW + 4);
+
+    tft.startWrite();
+    tft.fillRect(clearX, FLOW_VALUE_Y, clearW, FLOW_VALUE_H, pal.screenBg);
     tft.setTextColor(pal.valueColor, pal.screenBg);
-    tft.drawString(buf, X, Y + 14);
+    tft.setTextDatum(TL_DATUM);
+    tft.drawString(buf, X, FLOW_VALUE_Y);
+    tft.endWrite();
 
     tft.setTextFont(1);
 }
@@ -45,12 +68,11 @@ void PumpWidget::drawIcon(TFT_eSPI& tft,
     const int16_t ix = ICON_CX - ICON_W / 2;
     const int16_t iy = ICON_CY - ICON_H / 2;
 
-    // Внешний контур иконки насоса
+    tft.startWrite();
     if (ICON_PUMP_OUTER != nullptr) {
         tft.drawBitmap(ix, iy, ICON_PUMP_OUTER, ICON_PUMP_OUTER_W, ICON_PUMP_OUTER_H,
                        outerColor, pal.screenBg);
     }
-    // Внутренняя деталь иконки
     if (ICON_PUMP_INNER != nullptr) {
         tft.drawBitmap(ix + (ICON_W - ICON_PUMP_INNER_W) / 2,
                        iy + (ICON_H - ICON_PUMP_INNER_H) / 2,
@@ -58,11 +80,10 @@ void PumpWidget::drawIcon(TFT_eSPI& tft,
                        ICON_PUMP_INNER_W, ICON_PUMP_INNER_H,
                        outerColor, pal.screenBg);
     }
+    tft.endWrite();
 }
 
 void PumpWidget::formatFlow(char* buf, uint8_t bufSize, uint16_t pulseHz) {
-    // Временная заглушка: перевод Гц в условный расход.
-    // TODO: заменить на реальный коэффициент калибровки насоса.
     const float lph = static_cast<float>(pulseHz) * 0.054f;
     snprintf(buf, bufSize, "%.2f", lph);
 }

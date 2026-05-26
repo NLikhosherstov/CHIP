@@ -1,6 +1,5 @@
 #pragma once
 
-#include "system/SystemState.h"
 #include <Arduino.h>
 
 // #include <stdint.h>
@@ -23,8 +22,13 @@ public:
   };
 
   struct HeatExchangerState {
+    static constexpr uint8_t FAULT_OC = 0x01;
+    static constexpr uint8_t FAULT_SCG = 0x02;
+    static constexpr uint8_t FAULT_SCV = 0x04;
     float temperature_c = 0.0F;
+    float temp_rate_c_per_s = 0.0F;
     bool valid = false;
+    uint8_t fault_flags = 0;
     uint32_t updated_at_ms = 0;
   };
 
@@ -63,7 +67,20 @@ public:
   MotorState getMotorState() const;
   AutomationState getAutomationState() const;
 
+  // Одноразовые запросы UI → автоматика (без прямой ссылки DisplayManager на AutomationController).
+  struct SystemRequest {
+    bool enter_auto = false;    // переход в AUTO из быстрого меню
+    bool enter_manual = false;
+  };
+
+  void postEnterAutoRequest();
+  void postEnterManualRequest();
+  SystemRequest getRequests() const;
+  void clearRequestEnterAuto();
+  void clearRequestEnterManual();
+
 private:
+  void clearAllRequests();
   friend class Max31855Sensor;
   friend class Dht22Sensor;
   friend class IgnitorController;
@@ -71,7 +88,11 @@ private:
   friend class MotorController;
   friend class AutomationController;
 
-  void setHeatExchangerState(float temperature_c, bool valid, uint32_t updated_at_ms);
+  void setHeatExchangerState(float temperature_c,
+                             float temp_rate_c_per_s,
+                             bool valid,
+                             uint8_t fault_flags,
+                             uint32_t updated_at_ms);
   void setRoomClimateState(float temperature_c, float humidity_percent, bool valid, uint32_t updated_at_ms);
   void setIgnitorState(bool enabled, uint8_t pwm_percent, uint32_t timeout_deadline_ms);
   void setPumpState(bool enabled, uint8_t speed_index, uint16_t pulse_hz);
@@ -85,4 +106,5 @@ private:
   PumpState m_pump_state;
   MotorState m_motor_state;
   AutomationState m_automation_state = AutomationState::STATE_IDLE;
+  SystemRequest m_requests{};
 };

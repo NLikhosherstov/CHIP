@@ -31,9 +31,11 @@ public:
               const ConfigManager& cfg) override;
 
     // ── Управление Быстрым меню ──────────────────────────────────────────
+    // default_item: индекс выбранного пункта при открытии (0 — «Вверх», 3 — «Вниз»).
     void showQuickMenu(TFT_eSPI& tft,
                        const SystemState& state,
-                       const ConfigManager& cfg);
+                       const ConfigManager& cfg,
+                       uint8_t default_item = 0);
 
     void hideQuickMenu(TFT_eSPI& tft,
                        const SystemState& state,
@@ -55,13 +57,14 @@ public:
                          ConfigManager& cfg);
 
     bool isQuickMenuVisible() const;
+    uint8_t quickMenuSelectedItem() const { return m_qmSelectedItem; }  // для Click в DisplayManager
 
 private:
     // ── Кеш для отслеживания изменений (dirty tracking) ──────────────────
     SystemState::AutomationState m_lastState;
-    float    m_lastHexTemp;
-    float    m_lastRoomTemp;
-    float    m_lastHumidity;
+    int16_t  m_lastHexDisplay;
+    int16_t  m_lastRoomDisplay;
+    int16_t  m_lastHumDisplay;
     uint8_t  m_lastSpeedIndex;
     uint16_t m_lastTimerSec;
     uint16_t m_lastPulseHz;

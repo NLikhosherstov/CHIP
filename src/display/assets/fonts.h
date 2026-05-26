@@ -11,8 +11,10 @@
 //        ./fontconvert Aldrich-Regular.ttf 34 > src/display/assets/font_aldrich_34.h
 //   4. В fonts.cpp заменить nullptr на &Font_Aldrich_34_Data, включив нужный .h-файл.
 //
-// Для TFT_eSPI шрифты — структуры GFXfont. Включение TFT_eSPI.h обеспечивает нужный тип.
+// Для TFT_eSPI шрифты — структуры GFXfont.
 
+#include <Arduino.h>
+#include <Fonts/GFXFF/gfxfont.h>
 #include <TFT_eSPI.h>
 
 // ─── Aldrich (основной шрифт чисел и режимов) ─────────────────────────────────
