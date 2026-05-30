@@ -4,16 +4,17 @@
 #include <stdio.h>
 
 #include "display/PaletteRGB565.h"
+#include "display/SpritePool.h"
 #include "display/WidgetText.h"
 #include "display/assets/fonts.h"
 
 namespace {
-char s_lastCurBuf[6]  = "";
-char s_lastMaxBuf[8]  = "";
-bool s_labelDrawn     = false;
+char s_lastCurBuf[6] = "";
+char s_lastMaxBuf[8] = "";
+bool s_labelDrawn    = false;
 
-static constexpr int16_t VALUES_Y = TimerWidget::Y + 12;
-static constexpr int16_t VALUES_H = 24;
+static const SpriteScreenRect kScreen = {TimerWidget::VALUES_PUSH_X, TimerWidget::VALUES_PUSH_Y,
+                                         SpriteSlot::Medium};
 }  // namespace
 
 void TimerWidget::draw(TFT_eSPI& tft,
@@ -22,13 +23,13 @@ void TimerWidget::draw(TFT_eSPI& tft,
                        const PaletteRGB565& pal) {
     s_lastCurBuf[0] = '\0';
     s_lastMaxBuf[0] = '\0';
-    s_labelDrawn = false;
+    s_labelDrawn     = false;
 
     tft.startWrite();
     tft.fillRect(X, Y, W, H, pal.screenBg);
     tft.endWrite();
 
-    tft.setFreeFont(Font_RobotoMono_12);
+    tft.setFreeFont(Font_small);
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(pal.labelColor, pal.screenBg);
     tft.startWrite();
@@ -58,7 +59,7 @@ void TimerWidget::update(TFT_eSPI& tft,
     }
 
     if (!s_labelDrawn) {
-        tft.setFreeFont(Font_RobotoMono_12);
+        tft.setFreeFont(Font_small);
         tft.setTextDatum(TR_DATUM);
         tft.setTextColor(pal.labelColor, pal.screenBg);
         tft.startWrite();
@@ -68,22 +69,28 @@ void TimerWidget::update(TFT_eSPI& tft,
         s_labelDrawn = true;
     }
 
-    tft.setFreeFont(Font_Aldrich_24);
-    const int16_t maxW = tft.textWidth(bufMax);
-    const int16_t curW = tft.textWidth(bufCur);
-    const int16_t clearW = maxW + curW + 4;
-    const int16_t clearX = X + W - clearW;
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Medium);
+    if (spr == nullptr) {
+        SpritePool::drawOomMarker(tft, kScreen);
+        return;
+    }
 
-    tft.startWrite();
-    tft.fillRect(clearX, VALUES_Y, clearW, VALUES_H, pal.screenBg);
+    spr->fillSprite(pal.screenBg);
+    spr->setFreeFont(Font_default);
 
-    tft.setTextDatum(BR_DATUM);
-    tft.setTextColor(pal.valueDimColor, pal.screenBg);
-    tft.drawString(bufMax, X + W, Y + H);
+    const int16_t maxW    = spr->textWidth(bufMax);
+    const int16_t spriteW = SpritePool::MEDIUM_W;
+    const int16_t spriteH = SpritePool::MEDIUM_H;
+    const int16_t baseY   = spriteH - 2;
 
-    tft.setTextColor(pal.valueColor, pal.screenBg);
-    tft.drawString(bufCur, X + W - maxW, Y + H);
-    tft.endWrite();
+    spr->setTextDatum(BR_DATUM);
+    spr->setTextColor(pal.valueDimColor, pal.screenBg);
+    spr->drawString(bufMax, spriteW, baseY);
 
+    spr->setTextColor(pal.valueColor, pal.screenBg);
+    spr->drawString(bufCur, spriteW - maxW, baseY);
+
+    spr->pushSprite(kScreen.x, kScreen.y);
+    SpritePool::release(SpriteSlot::Medium);
     tft.setTextFont(1);
 }

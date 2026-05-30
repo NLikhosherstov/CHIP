@@ -94,7 +94,7 @@ void MainMenuScreen::drawAll(TFT_eSPI& tft, const ConfigManager& cfg) {
     tft.fillScreen(BG_COLOR);
 
     // Заголовок
-    tft.setFreeFont(Font_Aldrich_24);
+    tft.setFreeFont(Font_default);
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(HEADER_COLOR, BG_COLOR);
     tft.drawString("\xCD\xE0\xF1\xF2\xF0\xEE\xE9\xEA\xE8", 8, 4); // "Настройки"
@@ -117,7 +117,7 @@ void MainMenuScreen::drawItem(TFT_eSPI& tft,
     tft.fillRect(0, itemY, 320, ITEM_H, rowBg);
 
     // Метка параметра
-    tft.setFreeFont(Font_RobotoMono_12);
+    tft.setFreeFont(Font_small);
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(LABEL_COLOR, rowBg);
     tft.drawString(ITEMS[index].label, 8, itemY + ITEM_H / 4);
@@ -134,7 +134,7 @@ void MainMenuScreen::drawItem(TFT_eSPI& tft,
         default: break;
     }
 
-    tft.setFreeFont(Font_Aldrich_24);
+    tft.setFreeFont(Font_default);
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(VALUE_COLOR, rowBg);
     tft.drawString(valBuf, 8, itemY + ITEM_H * 3 / 4);

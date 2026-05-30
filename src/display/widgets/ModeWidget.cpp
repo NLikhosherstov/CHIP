@@ -17,13 +17,13 @@ void ModeWidget::update(TFT_eSPI& tft,
     tft.fillRect(X, Y, W, H, pal.screenBg);
 
     // Название режима (крупно, Aldrich 24px)
-    tft.setFreeFont(Font_Aldrich_24);
+    tft.setFreeFont(Font_default);
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(pal.modeNameColor, pal.screenBg);
     tft.drawString(modeName(state), X, Y);
 
     // Подпись "режим" (мелко, Roboto Mono 12px)
-    tft.setFreeFont(Font_RobotoMono_12);
+    tft.setFreeFont(Font_small);
     tft.setTextColor(pal.labelColor, pal.screenBg);
     tft.drawString("MODE", X + 1, Y + 22);
 

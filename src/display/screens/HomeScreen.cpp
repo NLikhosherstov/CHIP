@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include "display/PaletteRGB565.h"
 #include "display/assets/fonts.h"
+#include "display/SpritePool.h"
 #include "display/widgets/CoreWidget.h"
 #include "display/widgets/ModeWidget.h"
+#include "display/widgets/PumpIndicator.h"
 #include "display/widgets/PumpWidget.h"
 #include "display/widgets/SpeedWidget.h"
 #include "display/widgets/TimerWidget.h"
@@ -55,14 +57,14 @@ void HomeScreen::onEnter(TFT_eSPI& tft,
                           const ConfigManager& cfg) {
     m_fullRedrawNeeded = true;
     m_qmVisible = false;
-    CoreWidget::initHexSprite(tft);
+    SpritePool::init(tft);
     drawAll(tft, state, cfg);
 }
 
 void HomeScreen::onExit() {
     m_qmVisible = false;
     m_fullRedrawNeeded = true;
-    CoreWidget::releaseHexSprite();
+    SpritePool::shutdown();
 }
 
 void HomeScreen::tick(TFT_eSPI& tft,
@@ -206,6 +208,7 @@ void HomeScreen::drawAll(TFT_eSPI& tft,
     CoreWidget::drawAll(tft, hex.temperature_c, room.temperature_c,
                         room.humidity_percent, pal);
     ModeWidget::draw(tft, state.getAutomationState(), pal);
+    PumpIndicator::draw(tft, pump.enabled, pal);
     PumpWidget::draw(tft, pump.pulse_hz, pump.enabled, pal);
     SpeedWidget::draw(tft, mtr.speed_index, pal);
     TimerWidget::draw(tft,
@@ -259,14 +262,14 @@ void HomeScreen::updateDirtyWidgets(TFT_eSPI& tft,
         m_lastSpeedIndex = mtr.speed_index;
     }
 
-    if (pump.pulse_hz != m_lastPulseHz || pump.enabled != m_lastPumpActive) {
-        if (pump.enabled != m_lastPumpActive) {
-            PumpWidget::draw(tft, pump.pulse_hz, pump.enabled, pal);
-        } else {
-            PumpWidget::updateFlow(tft, pump.pulse_hz, pal);
-        }
-        m_lastPulseHz    = pump.pulse_hz;
+    if (pump.enabled != m_lastPumpActive) {
+        PumpIndicator::draw(tft, pump.enabled, pal);
         m_lastPumpActive = pump.enabled;
+    }
+
+    if (pump.pulse_hz != m_lastPulseHz) {
+        PumpWidget::updateFlow(tft, pump.pulse_hz, pal);
+        m_lastPulseHz = pump.pulse_hz;
     }
 
     const uint16_t timerSec = calcIgnitorElapsedSec(ign, cfg);
@@ -323,7 +326,7 @@ void HomeScreen::drawQuickMenuItem(TFT_eSPI& tft,
     }
 
     // Метка пункта (слева)
-    tft.setFreeFont(Font_RobotoMono_12);
+    tft.setFreeFont(Font_small);
     tft.setTextDatum(ML_DATUM);
     const uint16_t labelColor = selected ? RGB565(0xFF, 0xFF, 0xFF) : RGB565(0xA0, 0xA0, 0xA0);
     tft.setTextColor(labelColor, selected ? RGB565(0x30, 0x30, 0x38) : QM_BG);
@@ -346,7 +349,7 @@ void HomeScreen::drawQuickMenuItem(TFT_eSPI& tft,
     }
 
     if (valBuf[0] != '\0') {
-        tft.setFreeFont(Font_Aldrich_24);
+        tft.setFreeFont(Font_default);
         tft.setTextDatum(MR_DATUM);
         tft.setTextColor(selected ? RGB565(0xFF, 0xFF, 0xFF) : RGB565(0xDF, 0xDF, 0xDF),
                          selected ? RGB565(0x30, 0x30, 0x38) : QM_BG);

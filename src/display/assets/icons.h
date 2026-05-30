@@ -13,26 +13,38 @@
 //      Настройки: 1 bit per pixel, Horizontal, Draw mode: Horizontal.
 //   4. Вставить массив в icons.cpp, заменив nullptr на имя массива.
 
-// ─── Иконка термометра (температура воздуха) ──────────────────────────────────
-extern const uint8_t* const ICON_TEMP_LOW;
-static constexpr uint8_t ICON_TEMP_LOW_W = 24;
-static constexpr uint8_t ICON_TEMP_LOW_H = 24;
+namespace icon{
+    static constexpr uint16_t INDICATOR_ICON_WIDTH  = 32;
+    static constexpr uint16_t INDICATOR_ICON_HEIGHT = 44;
 
-// ─── Иконка капли с процентом (влажность) ─────────────────────────────────────
-extern const uint8_t* const ICON_DROPLET_PCT;
-static constexpr uint8_t ICON_DROPLET_W = 18;
-static constexpr uint8_t ICON_DROPLET_H = 25;
+    static constexpr uint16_t CORE_ICON_WIDTH  = 24;
+    static constexpr uint16_t CORE_ICON_HEIGHT = 24;
 
-// ─── Иконка насоса (двухслойная: внешний контур + внутренняя деталь) ──────────
-extern const uint8_t* const ICON_PUMP_OUTER;
-static constexpr uint8_t ICON_PUMP_OUTER_W = 23;
-static constexpr uint8_t ICON_PUMP_OUTER_H = 32;
+    // Иконка термометра (температура воздуха) ─────────────────────────
+    extern const uint8_t* const TEMP_PRIMARY;
+    extern const uint8_t *const TEMP_SECONDARY;
 
-extern const uint8_t* const ICON_PUMP_INNER;
-static constexpr uint8_t ICON_PUMP_INNER_W = 10;
-static constexpr uint8_t ICON_PUMP_INNER_H = 10;
+    static constexpr uint8_t TEMP_W = CORE_ICON_WIDTH;
+    static constexpr uint8_t TEMP_H = CORE_ICON_HEIGHT;
 
-// ─── Иконка свечи зажигания (молния) ──────────────────────────────────────────
-extern const uint8_t* const ICON_IGNITION;
-static constexpr uint8_t ICON_IGNITION_W = 23;
-static constexpr uint8_t ICON_IGNITION_H = 32;
+    // Иконка капли с процентом (влажность) ────────────────────────────
+    extern const uint8_t* const DROPLET_PCT_PRIMARY;
+    extern const uint8_t* const DROPLET_PCT_SECONDARY;
+
+    static constexpr uint8_t DROPLET_W = CORE_ICON_WIDTH;
+    static constexpr uint8_t DROPLET_H = CORE_ICON_WIDTH;
+
+    // Иконка насоса ───────────────────────────────────────────────────
+    extern const uint8_t* const PUMP_PRIMARY;
+    extern const uint8_t* const PUMP_SECONDARY;
+
+    static constexpr uint8_t PUMP_W = INDICATOR_ICON_WIDTH;
+    static constexpr uint8_t PUMP_H = INDICATOR_ICON_HEIGHT;
+
+    // Иконка свечи зажигания ──────────────────────────────────────────
+    extern const uint8_t* const IGNITION_PRIMARY;
+    extern const uint8_t* const IGNITION_SECONDARY;
+
+    static constexpr uint8_t IGNITION_W = INDICATOR_ICON_WIDTH;
+    static constexpr uint8_t IGNITION_H = INDICATOR_ICON_HEIGHT;
+}

@@ -4,28 +4,28 @@
 #include <stdio.h>
 
 #include "display/PaletteRGB565.h"
+#include "display/SpritePool.h"
 #include "display/WidgetText.h"
 #include "display/assets/fonts.h"
-#include "display/assets/icons.h"
 
 namespace {
 char s_lastFlowBuf[8] = "";
 
-static constexpr int16_t FLOW_VALUE_Y = PumpWidget::Y + 14;
-static constexpr int16_t FLOW_VALUE_H = 21;
+static const SpriteScreenRect kScreen = {PumpWidget::FLOW_PUSH_X, PumpWidget::FLOW_PUSH_Y,
+                                         SpriteSlot::Medium};
 }  // namespace
 
 void PumpWidget::draw(TFT_eSPI& tft,
                       uint16_t pulseHz,
                       bool active,
                       const PaletteRGB565& pal) {
+    (void)active;
     s_lastFlowBuf[0] = '\0';
     tft.startWrite();
     tft.fillRect(X, Y, W, H, pal.screenBg);
     tft.endWrite();
-    drawIcon(tft, active, pal);
 
-    tft.setFreeFont(Font_RobotoMono_12);
+    tft.setFreeFont(Font_small);
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(pal.labelColor, pal.screenBg);
     tft.startWrite();
@@ -46,41 +46,20 @@ void PumpWidget::updateFlow(TFT_eSPI& tft,
         return;
     }
 
-    tft.setFreeFont(Font_Aldrich_24);
-    const int16_t textW = tft.textWidth(buf);
-    const int16_t clearX = X;
-    const int16_t clearW = (textW + 4 > W) ? W : (textW + 4);
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Medium);
+    if (spr == nullptr) {
+        SpritePool::drawOomMarker(tft, kScreen);
+        return;
+    }
 
-    tft.startWrite();
-    tft.fillRect(clearX, FLOW_VALUE_Y, clearW, FLOW_VALUE_H, pal.screenBg);
-    tft.setTextColor(pal.valueColor, pal.screenBg);
-    tft.setTextDatum(TL_DATUM);
-    tft.drawString(buf, X, FLOW_VALUE_Y);
-    tft.endWrite();
-
+    spr->fillSprite(pal.screenBg);
+    spr->setFreeFont(Font_default);
+    spr->setTextDatum(TL_DATUM);
+    spr->setTextColor(pal.valueColor, pal.screenBg);
+    spr->drawString(buf, 0, 0);
+    spr->pushSprite(kScreen.x, kScreen.y);
+    SpritePool::release(SpriteSlot::Medium);
     tft.setTextFont(1);
-}
-
-void PumpWidget::drawIcon(TFT_eSPI& tft,
-                           bool active,
-                           const PaletteRGB565& pal) {
-    const uint16_t outerColor = active ? pal.pumpIconActiveColor : pal.pumpIconIdleColor;
-    const int16_t ix = ICON_CX - ICON_W / 2;
-    const int16_t iy = ICON_CY - ICON_H / 2;
-
-    tft.startWrite();
-    if (ICON_PUMP_OUTER != nullptr) {
-        tft.drawBitmap(ix, iy, ICON_PUMP_OUTER, ICON_PUMP_OUTER_W, ICON_PUMP_OUTER_H,
-                       outerColor, pal.screenBg);
-    }
-    if (ICON_PUMP_INNER != nullptr) {
-        tft.drawBitmap(ix + (ICON_W - ICON_PUMP_INNER_W) / 2,
-                       iy + (ICON_H - ICON_PUMP_INNER_H) / 2,
-                       ICON_PUMP_INNER,
-                       ICON_PUMP_INNER_W, ICON_PUMP_INNER_H,
-                       outerColor, pal.screenBg);
-    }
-    tft.endWrite();
 }
 
 void PumpWidget::formatFlow(char* buf, uint8_t bufSize, uint16_t pulseHz) {
