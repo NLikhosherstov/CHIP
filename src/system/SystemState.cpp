@@ -142,6 +142,19 @@ void SystemState::clearRequestEnterManual() {
   interrupts();
 }
 
+void SystemState::toggleOutlineSprite() {
+  noInterrupts();
+  m_requests.outline_sprite = !m_requests.outline_sprite;
+  interrupts();
+}
+
+bool SystemState::isOutlineSpriteEnabled() const {
+  noInterrupts();
+  const bool enabled = m_requests.outline_sprite;
+  interrupts();
+  return enabled;
+}
+
 void SystemState::clearAllRequests() {
   noInterrupts();
   m_requests = SystemRequest{};

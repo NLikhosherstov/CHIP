@@ -71,13 +71,19 @@ public:
   struct SystemRequest {
     bool enter_auto = false;    // переход в AUTO из быстрого меню
     bool enter_manual = false;
+    bool outline_sprite = false;  // debug: draw sprite perimeter when rendering
   };
 
+  SystemRequest getRequests() const;
+ 
   void postEnterAutoRequest();
   void postEnterManualRequest();
-  SystemRequest getRequests() const;
+ 
   void clearRequestEnterAuto();
   void clearRequestEnterManual();
+ 
+  void toggleOutlineSprite();
+  bool isOutlineSpriteEnabled() const;
 
 private:
   void clearAllRequests();

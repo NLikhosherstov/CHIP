@@ -3,6 +3,7 @@
 #include <TFT_eSPI.h>
 #include <stdio.h>
 
+#include "WSerial.h"
 #include "display/PaletteRGB565.h"
 #include "display/SpritePool.h"
 #include "display/WidgetText.h"
@@ -20,16 +21,13 @@ void PumpWidget::draw(TFT_eSPI& tft,
                       bool active,
                       const PaletteRGB565& pal) {
     (void)active;
-    s_lastFlowBuf[0] = '\0';
-    tft.startWrite();
-    tft.fillRect(X, Y, W, H, pal.screenBg);
-    tft.endWrite();
+    s_lastFlowBuf[1] = '\0';
 
     tft.setFreeFont(Font_small);
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(pal.labelColor, pal.screenBg);
     tft.startWrite();
-    tft.drawString("L/H", X + 28, Y);
+    tft.drawString("L/H", X, Y);
     tft.endWrite();
     tft.setTextFont(1);
 
@@ -62,7 +60,7 @@ void PumpWidget::updateFlow(TFT_eSPI& tft,
     tft.setTextFont(1);
 }
 
-void PumpWidget::formatFlow(char* buf, uint8_t bufSize, uint16_t pulseHz) {
+void PumpWidget::formatFlow(char* buf, size_t bufSize, uint16_t pulseHz) {
     const float lph = static_cast<float>(pulseHz) * 0.054f;
-    snprintf(buf, bufSize, "%.2f", lph);
+    dtostrf(lph, 1, 2, buf);
 }
