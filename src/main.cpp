@@ -28,10 +28,10 @@ void setup() {
   pinMode(pin::IGNITOR, OUTPUT); digitalWrite(pin::IGNITOR, LOW);
   pinMode(pin::PUMP,    OUTPUT); digitalWrite(pin::PUMP,    LOW);
 
-  while (!Serial) {
-    digitalWrite(PC13, !digitalRead(PC13));
-    delay(100);
-  }
+  // while (!Serial) {
+  //   digitalWrite(PC13, !digitalRead(PC13));
+  //   delay(100);
+  // }
 
   const bool config_loaded = g_cfg.load();
   (void)config_loaded;
