@@ -3,7 +3,6 @@
 #include <TFT_eSPI.h>
 #include <stdio.h>
 
-#include "WSerial.h"
 #include "display/PaletteRGB565.h"
 #include "display/SpritePool.h"
 #include "display/WidgetText.h"
@@ -13,7 +12,7 @@ namespace {
 char s_lastFlowBuf[8] = "";
 
 static const SpriteScreenRect kScreen = {PumpWidget::FLOW_PUSH_X, PumpWidget::FLOW_PUSH_Y,
-                                         SpriteSlot::Medium};
+                                         SpriteSlot::M};
 }  // namespace
 
 void PumpWidget::draw(TFT_eSPI& tft,
@@ -23,12 +22,13 @@ void PumpWidget::draw(TFT_eSPI& tft,
     (void)active;
     s_lastFlowBuf[1] = '\0';
 
-    tft.setFreeFont(Font_small);
+    tft.loadFont(smooth_font::small);
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(pal.labelColor, pal.screenBg);
     tft.startWrite();
-    tft.drawString("L/H", X, Y);
+    tft.drawString("Л/Ч", X, Y);
     tft.endWrite();
+    tft.unloadFont();
     tft.setTextFont(1);
 
     updateFlow(tft, pulseHz, pal);
@@ -44,19 +44,21 @@ void PumpWidget::updateFlow(TFT_eSPI& tft,
         return;
     }
 
-    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Medium);
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::M);
     if (spr == nullptr) {
         SpritePool::drawOomMarker(tft, kScreen);
         return;
     }
 
     spr->fillSprite(pal.screenBg);
-    spr->setFreeFont(Font_default);
+    spr->loadFont(smooth_font::def);
     spr->setTextDatum(TL_DATUM);
     spr->setTextColor(pal.valueColor, pal.screenBg);
+    spr->fillRect(0, 0, W, H, pal.screenBg);
     spr->drawString(buf, 0, 0);
     spr->pushSprite(kScreen.x, kScreen.y);
-    SpritePool::release(SpriteSlot::Medium);
+    spr->unloadFont();
+    SpritePool::release(SpriteSlot::M);
     tft.setTextFont(1);
 }
 

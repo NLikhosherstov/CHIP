@@ -6,11 +6,12 @@
 //   Отредактировать глифы и выбрать диапазон символов в https://tchapi.github.io/Adafruit-GFX-Font-Customiser/
 
 #include <Arduino.h>
-#include <Fonts/GFXFF/gfxfont.h>
 #include <TFT_eSPI.h>
 
-extern const GFXfont* const Font_h1;        // Температура теплообменника
-extern const GFXfont* const Font_h2;        // Температура/влажность помещения
-extern const GFXfont* const Font_h3;        // Цифра скорости
-extern const GFXfont* const Font_default;   // Значения виджетов
-extern const GFXfont* const Font_small;     // Мелкие подписи ("режим", "л/ч", "сек")
+namespace smooth_font{
+    extern const uint8_t* const h1;        // Температура теплообменника
+    extern const uint8_t* const h2;        // Температура/влажность помещения
+    extern const uint8_t* const h3;        // Цифра скорости
+    extern const uint8_t* const def;       // Значения виджетов
+    extern const uint8_t* const small;     // Мелкие подписи ("режим", "л/ч", "сек")
+}

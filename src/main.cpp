@@ -22,6 +22,7 @@ static InputController*       g_input       = nullptr;
 void setup() {
   Serial.begin(115200);
   pinMode(PC13, OUTPUT); // Встроенный светодиод
+  analogReadResolution(12); //Разрядность АЦП 12-бит
 
   // Инициализация пинов в режим выходов и принудительное их выключение
   pinMode(pin::MOTOR,   OUTPUT); digitalWrite(pin::MOTOR,   LOW);

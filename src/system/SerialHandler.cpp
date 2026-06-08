@@ -1,6 +1,7 @@
 #include "system/SerialHandler.h"
 
 #include <Arduino.h>
+#include <ctype.h>
 #include <string.h>
 
 #include "system/ConfigManager.h"
@@ -81,6 +82,17 @@ void printCommandSeparator() {
   Serial.println();
 }
 
+bool equalsIgnoreCase(const char* a, const char* b) {
+  while (*a != '\0' && *b != '\0') {
+    if (tolower(static_cast<unsigned char>(*a)) != tolower(static_cast<unsigned char>(*b))) {
+      return false;
+    }
+    ++a;
+    ++b;
+  }
+  return *a == *b;
+}
+
 }  // namespace
 
 SerialHandler::SerialHandler(SystemState& state, ConfigManager& config)
@@ -126,6 +138,17 @@ void SerialHandler::processLine(char* line) {
     return;
   }
 
+  if (strncmp(line, "set ", 4) == 0) {
+    if (handleSetCommand(line + 4)) {
+      printCommandSeparator();
+    } else {
+      Serial.println(F("Invalid set command."));
+      printCommandHelp();
+      printCommandSeparator();
+    }
+    return;
+  }
+
   if (strcmp(line, "state") == 0) {
     printState();
   } else if (strcmp(line, "exc") == 0) {
@@ -142,6 +165,8 @@ void SerialHandler::processLine(char* line) {
     printAutomationMode();
   } else if (strcmp(line, "cfg") == 0) {
     printConfig();
+  } else if (strcmp(line, "calibrate") == 0) {
+    m_state.postEnterCalibrationRequest();
   } else if (strcmp(line, "outline") == 0) {
     toggleOutlineSprite();
   } else if (strcmp(line, "help") == 0) {
@@ -258,6 +283,7 @@ void SerialHandler::printConfig() const {
   printLabelUInt(F("pump_pulse_3    - "), cfg.pump_pulse_3);
   printLabelUInt(F("pump_pulse_4    - "), cfg.pump_pulse_4);
   printLabelUInt(F("pumpPerfomance  - "), cfg.pumpPerfomance);
+  printLabelUInt(F("max_fuel_flow   - "), cfg.max_fuel_flow_lph_x10);
   printLabelInt( F("fuel_correction - "), cfg.fuel_correction);
   printLabelBool(F("embededPump     - "), cfg.embededPump);
 
@@ -270,8 +296,10 @@ void SerialHandler::printConfig() const {
 
   Serial.println();
   Serial.println(F("--- Other ---"));
-  printLabelUInt(F("ignitor_timeout_s    - "), cfg.ignitor_timeout_s);
-  printLabelInt( F("target_temperature_c - "), cfg.target_temperature_c);
+  printLabelUInt(F("ignitor_timeout_s        - "), cfg.ignitor_timeout_s);
+  printLabelInt( F("target_temperature_c     - "), cfg.target_temperature_c);
+  printLabelInt( F("cooling_target_c         - "), cfg.cooling_target_c);
+  printLabelInt( F("temperature_hysteresis_c - "), cfg.temperature_hysteresis_c);
 }
 
 void SerialHandler::printCommandHelp() const {
@@ -285,9 +313,101 @@ void SerialHandler::printCommandHelp() const {
   Serial.println(F("  motor   - motor state"));
   Serial.println(F("  mode    - automation mode (IDLE/AUTO/MANUAL/STOP)"));
   Serial.println(F("  cfg     - configuration by category"));
+  Serial.println(F("  calibrate - enter keyboard calibration screen"));
   Serial.println(F("  outline - toggle sprite perimeter outline when rendering"));
   Serial.println(F("  restart - firmware restart"));
+  Serial.println(F("  set mode IDLE|AUTO|MANUAL|STOP - set automation mode"));
+  Serial.println(F("  set pulse <int>                - set pump pulse_hz"));
+  Serial.println(F("  set speed 0-4                  - set pump/motor speed_index"));
+  Serial.println(F("  set ign 0-1                    - set ignitor enabled"));
   Serial.println(F("  help    - this list"));
+}
+
+bool SerialHandler::handleSetCommand(const char* args) {
+  if (strncmp(args, "mode ", 5) == 0) {
+    handleSetMode(args + 5);
+    return true;
+  }
+  if (strncmp(args, "pulse ", 6) == 0) {
+    handleSetPulse(args + 6);
+    return true;
+  }
+  if (strncmp(args, "speed ", 6) == 0) {
+    handleSetSpeed(args + 6);
+    return true;
+  }
+  if (strncmp(args, "ign ", 4) == 0) {
+    handleSetIgn(args + 4);
+    return true;
+  }
+  return false;
+}
+
+void SerialHandler::handleSetMode(const char* mode) {
+  SystemState::AutomationState state = SystemState::AutomationState::STATE_IDLE;
+
+  if (equalsIgnoreCase(mode, "IDLE")) {
+    state = SystemState::AutomationState::STATE_IDLE;
+  } else if (equalsIgnoreCase(mode, "AUTO")) {
+    state = SystemState::AutomationState::STATE_AUTO_START;
+  } else if (equalsIgnoreCase(mode, "MANUAL")) {
+    state = SystemState::AutomationState::STATE_MANUAL;
+  } else if (equalsIgnoreCase(mode, "STOP")) {
+    state = SystemState::AutomationState::STATE_STOP;
+  } else {
+    Serial.println(F("Expected: set mode IDLE|AUTO|MANUAL|STOP"));
+    return;
+  }
+
+  m_state.setAutomationState(state);
+  printAutomationMode();
+}
+
+void SerialHandler::handleSetPulse(const char* value) {
+  char* end = nullptr;
+  const long pulse_hz = strtol(value, &end, 10);
+  if (end == value || *end != '\0' || pulse_hz < 0 || pulse_hz > UINT16_MAX) {
+    Serial.println(F("Expected: set pulse <0..65535>"));
+    return;
+  }
+
+  const auto pump = m_state.getPumpState();
+  const uint16_t pulse = static_cast<uint16_t>(pulse_hz);
+  m_state.setPumpState(static_cast<bool>(pulse), pump.speed_index, pulse);
+  printPump();
+}
+
+void SerialHandler::handleSetSpeed(const char* value) {
+  char* end = nullptr;
+  const long speed_index = strtol(value, &end, 10);
+  if (end == value || *end != '\0' || speed_index < 0 || speed_index > 4) {
+    Serial.println(F("Expected: set speed 0-4"));
+    return;
+  }
+
+  const auto pump = m_state.getPumpState();
+  const auto motor = m_state.getMotorState();
+  const uint8_t index = static_cast<uint8_t>(speed_index);
+  const bool enabled = static_cast<bool>(index);
+
+  m_state.setPumpState(enabled, index, pump.pulse_hz);
+  m_state.setMotorState(enabled, index, motor.pwm_duty_permille, motor.pwm_frequency_hz);
+  printPump();
+  Serial.println();
+  printMotor();
+}
+
+void SerialHandler::handleSetIgn(const char* value) {
+  char* end = nullptr;
+  const long enabled_value = strtol(value, &end, 10);
+  if (end == value || *end != '\0' || enabled_value < 0 || enabled_value > 1) {
+    Serial.println(F("Expected: set ign 0-1"));
+    return;
+  }
+
+  const auto ign = m_state.getIgnitorState();
+  m_state.setIgnitorState(static_cast<bool>(enabled_value), ign.pwm_percent, ign.timeout_deadline_ms);
+  printIgnitor();
 }
 
 void SerialHandler::toggleOutlineSprite() {

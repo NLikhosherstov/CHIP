@@ -23,7 +23,7 @@ public:
   void emergencyStop();
   void enterAuto();
   void enterManual();
-  void setMotorStep(uint8_t step_1_to_4);
+  void setMotorStep(int8_t step_0_to_4);
   void setPumpEnabled(bool on);
   void setIgnitorEnabled(bool on);
 

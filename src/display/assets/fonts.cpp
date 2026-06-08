@@ -4,17 +4,20 @@
 // -> https://fonts.google.com/ 
 // -> https://rop.nl/truetype2gfx/ 
 // -> https://tchapi.github.io/Adafruit-GFX-Font-Customiser/
+// или
+// -> Генерация name.vlw
+// -> python tools\convert_font.py "path\name.vlw"
 
-#include "Aldrich_Regular70pt7b.h"
-#include "Aldrich_Regular34pt7b.h"
-#include "Aldrich_Regular28pt7b.h"
-#include "Roboto_Black12pt7b.h"
-#include "RobotoMono_Bold12pt7b.h"
+#include "h1.h"
+#include "h2.h"
+#include "h3.h"
+#include "default.h"
+#include "small.h"
 
-const GFXfont* const Font_h1        = &Aldrich_Regular36pt7b;
-const GFXfont* const Font_h2        = &Aldrich_Regular18pt7b;
-const GFXfont* const Font_h3        = &Aldrich_Regular15pt7b;
-const GFXfont* const Font_default   = &Roboto_Black12pt7b;
-const GFXfont* const Font_small     = &RobotoMono_Bold7pt7b;
-
-const GFXfont* const Font_RobotoMono_40 = nullptr;
+namespace smooth_font{
+    extern const uint8_t* const h1 = h1_vlw;
+    extern const uint8_t* const h2 = h2_vlw;
+    extern const uint8_t* const h3 = h3_vlw;
+    extern const uint8_t* const def = default_vlw;
+    extern const uint8_t* const small = small_vlw;
+}

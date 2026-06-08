@@ -67,8 +67,8 @@ void AutomationController::enterManual() {
   m_state.setAutomationState(SystemState::AutomationState::STATE_MANUAL);
 }
 
-void AutomationController::setMotorStep(uint8_t step_1_to_4) {
-  m_motor.setStep(step_1_to_4);
+void AutomationController::setMotorStep(int8_t step_0_to_4) {
+  m_motor.setStep(step_0_to_4);
 }
 
 void AutomationController::setPumpEnabled(bool on) {

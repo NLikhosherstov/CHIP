@@ -31,3 +31,7 @@ constexpr PinName IGNITOR = PA_9;  // Ignitor control
 constexpr PinName PUMP  = PA_10;   // Fuel pump control
 
 }
+
+namespace aPin{
+    constexpr uint32_t KBD_OUT = A8;  // Analog keyboard input
+}

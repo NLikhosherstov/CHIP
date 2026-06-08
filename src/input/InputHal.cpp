@@ -3,13 +3,14 @@
 #include <Arduino.h>
 
 #include "pins.h"
+#include "pins_arduino.h"
 
 InputHal* InputHal::s_instance = nullptr;
 
 namespace {
 
 // Время стабилизации АЦП перед распознаванием кнопки.
-constexpr uint32_t ADC_STABLE_MS = 50;
+constexpr uint32_t ADC_STABLE_MS = 30;
 
 // Полуширина окна допуска: половина расстояния до ближайшего соседнего уровня.
 uint16_t computeWindow(uint16_t level, const uint16_t* levels, uint8_t count, uint16_t max_window) {
@@ -36,10 +37,12 @@ void InputHal::begin(const ConfigManager::Config& cal) {
   m_stable_kbd = -1;
   m_last_adc = 0;
   m_adc_stable_ms = 0;
+  m_adc_stable = false;
+  m_calibration_mode = false;
 
   m_enc.init(pin::ENC_S1, pin::ENC_S2, pin::ENC_KEY, INPUT, INPUT_PULLUP, LOW);
   m_enc.setEncISR(true);
-  m_enc.setHoldTimeout(2000);  // длинное нажатие оси → главное меню
+  m_enc.setHoldTimeout(1000);  // длинное нажатие оси → главное меню
 
   m_kbd[0].setHoldTimeout(1800);  // Power: аварийный стоп
   for (uint8_t i = 1; i < KBD_COUNT; ++i) {
@@ -67,6 +70,18 @@ void InputHal::reloadCalibration(const ConfigManager::Config& cal) {
       m_adc_window[i] = 8;
     }
   }
+}
+
+void InputHal::setCalibrationMode(bool enabled) {
+  m_calibration_mode = enabled;
+}
+
+uint16_t InputHal::getStableAdc() const {
+  return m_last_adc;
+}
+
+bool InputHal::isKeyPressed() const {
+  return m_adc_stable && (m_last_adc < ADC_IDLE_THRESHOLD);
 }
 
 void InputHal::tick() {
@@ -125,23 +140,34 @@ int8_t InputHal::classifyAdc(uint16_t sample) const {
   return best;
 }
 
-void InputHal::tickKeyboard() {
-  if (!m_kbd_enabled) {
-    return;
-  }
-
-  const uint16_t sample = static_cast<uint16_t>(analogRead(pin::KBD_OUT));
+void InputHal::sampleKeyboardAdc() {
+  const uint16_t sample = static_cast<uint16_t>(analogRead(aPin::KBD_OUT));
   const uint32_t now = millis();
 
-  // Сброс таймера стабильности при заметном изменении АЦП.
   if (abs(static_cast<int32_t>(sample) - static_cast<int32_t>(m_last_adc)) > 8) {
     m_last_adc = sample;
     m_adc_stable_ms = now;
+    m_adc_stable = false;
+  } else if (!m_adc_stable && (now - m_adc_stable_ms) >= ADC_STABLE_MS) {
+    m_adc_stable = true;
+  }
+}
+
+void InputHal::tickKeyboard() {
+  if (!m_kbd_enabled && !m_calibration_mode) {
+    return;
   }
 
+  sampleKeyboardAdc();
+
+  if (m_calibration_mode) {
+    return;
+  }
+
+  const uint32_t now = millis();
   int8_t active = -1;
-  if ((now - m_adc_stable_ms) >= ADC_STABLE_MS) {
-    active = classifyAdc(sample);
+  if (m_adc_stable) {
+    active = classifyAdc(m_last_adc);
   }
   m_stable_kbd = active;
 
@@ -173,7 +199,7 @@ void InputHal::tickEncoder() {
     ev.kind = RawInputEvent::Kind::Encoder;
     ev.timestamp_ms = now;
     ev.encoder.motion = EncoderMotion::StepCw;
-    ev.encoder.steps = 1;
+    ev.encoder.steps = -1;
     push(ev);
   }
   if (m_enc.left()) {
@@ -181,7 +207,7 @@ void InputHal::tickEncoder() {
     ev.kind = RawInputEvent::Kind::Encoder;
     ev.timestamp_ms = now;
     ev.encoder.motion = EncoderMotion::StepCcw;
-    ev.encoder.steps = -1;
+    ev.encoder.steps = 1;
     push(ev);
   }
   if (m_enc.click()) {

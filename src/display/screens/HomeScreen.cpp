@@ -70,10 +70,8 @@ void HomeScreen::onExit() {
 void HomeScreen::tick(TFT_eSPI& tft,
                       const SystemState& state,
                       const ConfigManager& cfg) {
-    const auto newState = state.getAutomationState();
-
-    // Полная перерисовка при смене режима автоматики или принудительном флаге
-    if (newState != m_lastState || m_fullRedrawNeeded) {
+    // Полная перерисовка только при принудительном флаге (onEnter, hideQuickMenu)
+    if (m_fullRedrawNeeded) {
         drawAll(tft, state, cfg);
         if (m_qmVisible) {
             drawQuickMenuOverlay(tft, state, cfg);
@@ -223,7 +221,8 @@ void HomeScreen::drawAll(TFT_eSPI& tft,
 void HomeScreen::updateDirtyWidgets(TFT_eSPI& tft,
                                      const SystemState& state,
                                      const ConfigManager& cfg) {
-    const auto& pal  = PaletteManager::get(state.getAutomationState());
+    const auto newState = state.getAutomationState();
+    const auto& pal  = PaletteManager::get(newState);
     const auto  hex  = state.getHeatExchangerState();
     const auto  room = state.getRoomClimateState();
     const auto  pump = state.getPumpState();
@@ -234,22 +233,35 @@ void HomeScreen::updateDirtyWidgets(TFT_eSPI& tft,
     // CoreWidget находится под оверлеем Быстрого меню — не перерисовываем
     // фон пока меню открыто, чтобы не было мерцания сквозь overlay.
     if (!m_qmVisible) {
-        const int16_t hexDisplay = static_cast<int16_t>(hex.temperature_c);
-        if (hexDisplay != m_lastHexDisplay) {
-            CoreWidget::updateHexTemp(tft, hex.temperature_c, pal);
-            m_lastHexDisplay = hexDisplay;
-        }
+        // Смена режима автоматики — новая палитра
+        if (newState != m_lastState) {
+            if (!m_qmVisible) {
+                CoreWidget::drawAll(tft, hex.temperature_c, room.temperature_c,
+                                    room.humidity_percent, pal);
+                m_lastHexDisplay  = static_cast<int16_t>(hex.temperature_c);
+                m_lastRoomDisplay = static_cast<int16_t>(room.temperature_c);
+                m_lastHumDisplay  = static_cast<int16_t>(room.humidity_percent);
+            }
+            ModeWidget::draw(tft, newState, pal);
+            m_lastState = newState;
+        }else{
+            const int16_t hexDisplay = static_cast<int16_t>(hex.temperature_c);
+            if (hexDisplay != m_lastHexDisplay) {
+                CoreWidget::updateHexTemp(tft, hex.temperature_c, pal);
+                m_lastHexDisplay = hexDisplay;
+            }
 
-        const int16_t roomDisplay = static_cast<int16_t>(room.temperature_c);
-        if (roomDisplay != m_lastRoomDisplay) {
-            CoreWidget::updateRoomTemp(tft, room.temperature_c, pal);
-            m_lastRoomDisplay = roomDisplay;
-        }
+            const int16_t roomDisplay = static_cast<int16_t>(room.temperature_c);
+            if (roomDisplay != m_lastRoomDisplay) {
+                CoreWidget::updateRoomTemp(tft, room.temperature_c, pal);
+                m_lastRoomDisplay = roomDisplay;
+            }
 
-        const int16_t humDisplay = static_cast<int16_t>(room.humidity_percent);
-        if (humDisplay != m_lastHumDisplay) {
-            CoreWidget::updateHumidity(tft, room.humidity_percent, pal);
-            m_lastHumDisplay = humDisplay;
+            const int16_t humDisplay = static_cast<int16_t>(room.humidity_percent);
+            if (humDisplay != m_lastHumDisplay) {
+                CoreWidget::updateHumidity(tft, room.humidity_percent, pal);
+                m_lastHumDisplay = humDisplay;
+            }
         }
     } else {
         m_lastHexDisplay  = static_cast<int16_t>(hex.temperature_c);
@@ -326,11 +338,13 @@ void HomeScreen::drawQuickMenuItem(TFT_eSPI& tft,
     }
 
     // Метка пункта (слева)
-    tft.setFreeFont(Font_small);
+    
+    tft.loadFont(smooth_font::small);
     tft.setTextDatum(ML_DATUM);
     const uint16_t labelColor = selected ? RGB565(0xFF, 0xFF, 0xFF) : RGB565(0xA0, 0xA0, 0xA0);
     tft.setTextColor(labelColor, selected ? RGB565(0x30, 0x30, 0x38) : QM_BG);
     tft.drawString(QM_LABELS[index], QM_X + QM_ITEM_PAD_X, itemY + QM_ITEM_H / 2 - 2);
+    tft.unloadFont();
 
     // Значение пункта (справа)
     char valBuf[12] = "";
@@ -349,11 +363,12 @@ void HomeScreen::drawQuickMenuItem(TFT_eSPI& tft,
     }
 
     if (valBuf[0] != '\0') {
-        tft.setFreeFont(Font_default);
+        tft.loadFont(smooth_font::def);
         tft.setTextDatum(MR_DATUM);
         tft.setTextColor(selected ? RGB565(0xFF, 0xFF, 0xFF) : RGB565(0xDF, 0xDF, 0xDF),
                          selected ? RGB565(0x30, 0x30, 0x38) : QM_BG);
         tft.drawString(valBuf, QM_X + QM_W - QM_ITEM_PAD_X, itemY + QM_ITEM_H / 2 - 2);
+        tft.unloadFont();
     }
 
     tft.setTextFont(1);

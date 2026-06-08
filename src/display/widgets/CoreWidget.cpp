@@ -1,6 +1,7 @@
 #include "display/widgets/CoreWidget.h"
 
 #include <TFT_eSPI.h>
+#include <cstdint>
 #include <stdio.h>
 
 #include "display/IconDraw.h"
@@ -18,56 +19,46 @@ char s_lastHumBuf[6]  = "";
 void formatHexTempString(char* buf, size_t bufSize, float temp_c) {
     const int t = static_cast<int>(temp_c);
     snprintf(buf, bufSize, "%d", t);
-    return;
-
-    if (t >= 0) {
-        snprintf(buf, bufSize, "%03d", t);
-    } else {
-        snprintf(buf, bufSize, "-%02d", -t);
-    }
 }
 
-// Единственное место расчёта push-rect спрайтов CoreWidget.
 static constexpr int16_t kIconSpritePadX =
-    (SpritePool::SMALL_W - icon::CORE_ICON_WIDTH) / 2;
+    (SpritePool::XS_W - icon::medium::BOX_W) / 2;
 static constexpr int16_t kIconSpritePadY =
-    (SpritePool::SMALL_H - icon::CORE_ICON_HEIGHT) / 2;
+    (SpritePool::XS_H - icon::medium::BOX_H) / 2;
 
 static constexpr int16_t rowValuePushY(int16_t iconY) {
-    // Центрирование Medium 25px относительно иконки 24px; -1 оптическое выравнивание.
-    return iconY + (icon::CORE_ICON_HEIGHT - SpritePool::MEDIUM_H) / 2 - 1;
+    return iconY + (icon::medium::GLYPH_SIZE - SpritePool::M_H) / 2 - 1;
 }
 
 static const SpriteScreenRect kHexScreen = {
-    CoreWidget::CX - SpritePool::LARGE_W / 2,
-    CoreWidget::CY - SpritePool::LARGE_H / 2,
-    SpriteSlot::Large};
+    CoreWidget::CX - SpritePool::XL_W / 2,
+    CoreWidget::CY - SpritePool::XL_H / 2,
+    SpriteSlot::XL};
 
 static const SpriteScreenRect kTempIconScreen = {
     CoreWidget::ROW_ICON_X - kIconSpritePadX,
     CoreWidget::ROOM_ICON_Y - kIconSpritePadY,
-    SpriteSlot::Small};
+    SpriteSlot::XS};
 
 static const SpriteScreenRect kHumIconScreen = {
     CoreWidget::ROW_ICON_X - kIconSpritePadX,
     CoreWidget::HUM_ICON_Y - kIconSpritePadY,
-    SpriteSlot::Small};
+    SpriteSlot::XS};
 
 static const SpriteScreenRect kRoomScreen = {
     CoreWidget::ROW_VALUE_X,
     rowValuePushY(CoreWidget::ROOM_ICON_Y),
-    SpriteSlot::Medium};
+    SpriteSlot::M};
 
 static const SpriteScreenRect kHumScreen = {
     CoreWidget::ROW_VALUE_X,
     rowValuePushY(CoreWidget::HUM_ICON_Y),
-    SpriteSlot::Medium};
+    SpriteSlot::M};
 
 void pushCoreIcon(TFT_eSPI& tft,
                   const SpriteScreenRect& screen,
-                  const uint8_t* primary,
-                  const uint8_t* secondary,
-                  uint16_t outerColor,
+                  const char* glyph,
+                  uint16_t color,
                   const PaletteRGB565& pal) {
     TFT_eSprite* spr = SpritePool::acquire(screen.slot);
     if (spr == nullptr) {
@@ -75,11 +66,17 @@ void pushCoreIcon(TFT_eSPI& tft,
         return;
     }
 
-    spr->fillSprite(pal.screenBg);
-    IconDraw::drawLayeredBitmap(*spr, kIconSpritePadX, kIconSpritePadY,
-                                primary, secondary,
-                                icon::CORE_ICON_WIDTH, icon::CORE_ICON_HEIGHT,
-                                outerColor, pal.screenBg);
+    spr->fillSprite(pal.coreRingBgColor);
+    
+    int8_t x_shift = -3;
+    int8_t y_shift = 0;
+    IconDraw::drawIcon(*spr,
+                       SpritePool::XS_W / 2 + x_shift,
+                       SpritePool::XS_H / 2 + y_shift,
+                       icon::medium::font,
+                       glyph,
+                       color,
+                       pal.coreRingBgColor);
     spr->pushSprite(screen.x, screen.y);
     SpritePool::release(screen.slot);
 }
@@ -119,22 +116,20 @@ void CoreWidget::updateHumidity(TFT_eSPI& tft, float humidity, const PaletteRGB5
 
 void CoreWidget::drawRing(TFT_eSPI& tft, const PaletteRGB565& pal) {
     tft.startWrite();
-    tft.fillCircle(CX, CY, RING_RADIUS - 1, pal.screenBg);
-    for (int16_t r = RING_RADIUS; r > RING_RADIUS - RING_THICK; --r) {
-        tft.drawCircle(CX, CY, r, pal.coreRingColor);
-    }
+    tft.fillCircle(CX, CY, RING_RADIUS - RING_THICK, pal.coreRingBgColor);
+    tft.drawArc(CX, CY, RING_RADIUS, RING_RADIUS - RING_THICK, 0, 360, pal.coreRingColor, pal.coreRingBgColor, true);
     tft.endWrite();
 }
 
 void CoreWidget::drawRoomIcons(TFT_eSPI& tft, const PaletteRGB565& pal) {
     pushCoreIcon(tft, kTempIconScreen,
-                 icon::TEMP_SECONDARY, icon::TEMP_PRIMARY,
+                 icon::medium::TEMP,
                  pal.roomTempColor, pal);
 }
 
 void CoreWidget::drawHumIcons(TFT_eSPI& tft, const PaletteRGB565& pal) {
     pushCoreIcon(tft, kHumIconScreen,
-                 icon::DROPLET_PCT_SECONDARY, icon::DROPLET_PCT_PRIMARY,
+                 icon::medium::DROPLET_PCT,
                  pal.humidityColor, pal);
 }
 
@@ -146,22 +141,23 @@ void CoreWidget::drawHexText(TFT_eSPI& tft, float temp_c, const PaletteRGB565& p
         return;
     }
 
-    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Large);
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::XL);
     if (spr == nullptr) {
         SpritePool::drawOomMarker(tft, kHexScreen);
         return;
     }
 
-    spr->fillSprite(pal.screenBg);
-    spr->setFreeFont(Font_h1);
+    spr->fillSprite(pal.coreRingBgColor);
+    spr->loadFont(smooth_font::h1);
     spr->setTextDatum(MC_DATUM);
-    spr->setTextColor(pal.hexTempColor, pal.screenBg);
-    const int16_t spriteCx = SpritePool::LARGE_W / 2 - 3;
-    const int16_t spriteCy = SpritePool::LARGE_H / 2;
+    spr->setTextColor(pal.hexTempColor, pal.coreRingBgColor);
+    const int16_t spriteCx = SpritePool::XL_W / 2 - 3;
+    const int16_t spriteCy = SpritePool::XL_H / 2 + 5;
     spr->drawString(buf, spriteCx, spriteCy);
+    spr->unloadFont();
 
     spr->pushSprite(kHexScreen.x, kHexScreen.y);
-    SpritePool::release(SpriteSlot::Large);
+    SpritePool::release(SpriteSlot::XL);
     tft.setTextFont(1);
 }
 
@@ -173,19 +169,20 @@ void CoreWidget::drawRoomText(TFT_eSPI& tft, float temp_c, const PaletteRGB565& 
         return;
     }
 
-    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Medium);
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::M);
     if (spr == nullptr) {
         SpritePool::drawOomMarker(tft, kRoomScreen);
         return;
     }
 
-    spr->fillSprite(pal.screenBg);
-    spr->setFreeFont(Font_h2);
-    spr->setTextDatum(ML_DATUM);
-    spr->setTextColor(pal.roomTempColor, pal.screenBg);
-    spr->drawString(buf, 0, SpritePool::MEDIUM_H / 2 - 1);
+    spr->fillSprite(pal.coreRingBgColor);
+    spr->loadFont(smooth_font::h2);
+    spr->setTextDatum(TL_DATUM);
+    spr->setTextColor(pal.roomTempColor, pal.coreRingBgColor);
+    spr->drawString(buf, 0, 1);
     spr->pushSprite(kRoomScreen.x, kRoomScreen.y);
-    SpritePool::release(SpriteSlot::Medium);
+    spr->unloadFont();
+    SpritePool::release(SpriteSlot::M);
     tft.setTextFont(1);
 }
 
@@ -197,18 +194,19 @@ void CoreWidget::drawHumText(TFT_eSPI& tft, float humidity, const PaletteRGB565&
         return;
     }
 
-    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Medium);
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::M);
     if (spr == nullptr) {
         SpritePool::drawOomMarker(tft, kHumScreen);
         return;
     }
 
-    spr->fillSprite(pal.screenBg);
-    spr->setFreeFont(Font_h2);
-    spr->setTextDatum(ML_DATUM);
-    spr->setTextColor(pal.humidityColor, pal.screenBg);
-    spr->drawString(buf, 0, SpritePool::MEDIUM_H / 2 - 1);
+    spr->fillSprite(pal.coreRingBgColor);
+    spr->loadFont(smooth_font::h2);
+    spr->setTextDatum(TL_DATUM);
+    spr->setTextColor(pal.humidityColor, pal.coreRingBgColor);
+    spr->drawString(buf, 0, 1);
     spr->pushSprite(kHumScreen.x, kHumScreen.y);
-    SpritePool::release(SpriteSlot::Medium);
+    spr->unloadFont();
+    SpritePool::release(SpriteSlot::M);
     tft.setTextFont(1);
 }

@@ -5,8 +5,10 @@
 
 #include "display/BaseScreen.h"
 #include "display/PaletteRGB565.h"
+#include "display/screens/CalibrationScreen.h"
 #include "display/screens/HomeScreen.h"
 #include "display/screens/MainMenuScreen.h"
+#include "display/SpritePool.h"
 #include "pins.h"
 #include "system/SystemState.h"
 
@@ -16,12 +18,20 @@ DisplayManager::DisplayManager()
     , m_currentId(ScreenId::HOME)
     , m_homeScreen(new HomeScreen())
     , m_mainMenuScreen(new MainMenuScreen())
+    , m_calibrationScreen(new CalibrationScreen())
     , m_mainMenuEditActive(false) {}
 
 DisplayManager::~DisplayManager() {
     delete m_homeScreen;
     delete m_mainMenuScreen;
+    delete m_calibrationScreen;
     delete m_tft;
+}
+
+bool DisplayManager::needsKeyboardCalibration(const ConfigManager& cfg) {
+    const auto& c = cfg.getConfig();
+    return c.btnPower == 0 && c.btnUp == 0 && c.btnIgnition == 0 &&
+           c.btnPump == 0 && c.btnDown == 0;
 }
 
 void DisplayManager::begin(const SystemState& state, const ConfigManager& cfg) {
@@ -34,12 +44,22 @@ void DisplayManager::begin(const SystemState& state, const ConfigManager& cfg) {
 
     backlightOn();
 
-    m_active = m_homeScreen;
-    m_currentId = ScreenId::HOME;
-    m_active->onEnter(*m_tft, state, cfg);
+    if (needsKeyboardCalibration(cfg)) {
+        switchTo(ScreenId::CALIBRATION, state, cfg);
+    } else {
+        m_active = m_homeScreen;
+        m_currentId = ScreenId::HOME;
+        m_active->onEnter(*m_tft, state, cfg);
+    }
 }
 
-void DisplayManager::tick(const SystemState& state, const ConfigManager& cfg) {
+void DisplayManager::tick(SystemState& state, const ConfigManager& cfg) {
+    const auto req = state.getRequests();
+    if (req.enter_calibration) {
+        state.clearRequestEnterCalibration();
+        openCalibration(state, cfg);
+    }
+
     if (m_active) {
         m_active->tick(*m_tft, state, cfg);
     }
@@ -54,7 +74,7 @@ void DisplayManager::switchTo(ScreenId id, const SystemState& state, const Confi
         m_active->onExit();
     }
 
-    // При входе в настройки — снимок для «выход без сохранения» (Right).
+    // При входе в настройки — снимок для «выход без сохранения» (Power).
     if (id == ScreenId::MAIN_MENU) {
         m_mainMenuSnapshot = cfg.getConfig();
         m_mainMenuEdit = m_mainMenuSnapshot;
@@ -69,6 +89,10 @@ void DisplayManager::switchTo(ScreenId id, const SystemState& state, const Confi
             break;
         case ScreenId::MAIN_MENU:
             m_active = m_mainMenuScreen;
+            break;
+        case ScreenId::CALIBRATION:
+            m_active = m_calibrationScreen;
+            SpritePool::init(*m_tft);
             break;
         default:
             m_active = m_homeScreen;
@@ -96,6 +120,10 @@ void DisplayManager::backlightOff() {
 
 bool DisplayManager::isQuickMenuVisible() const {
     return (m_currentId == ScreenId::HOME) && m_homeScreen->isQuickMenuVisible();
+}
+
+bool DisplayManager::isCalibrationActive() const {
+    return m_currentId == ScreenId::CALIBRATION;
 }
 
 bool DisplayManager::isMenuActive() const {
@@ -132,6 +160,11 @@ void DisplayManager::openMainMenu(const SystemState& state, const ConfigManager&
     switchTo(ScreenId::MAIN_MENU, state, cfg);
 }
 
+void DisplayManager::openCalibration(const SystemState& state, const ConfigManager& cfg) {
+    closeQuickMenu(state, cfg);
+    switchTo(ScreenId::CALIBRATION, state, cfg);
+}
+
 void DisplayManager::adjustSelectedItem(int8_t delta, SystemState& state, ConfigManager& cfg) {
     if (isQuickMenuVisible()) {
         m_homeScreen->quickMenuAdjust(*m_tft, delta, state, cfg);
@@ -140,9 +173,10 @@ void DisplayManager::adjustSelectedItem(int8_t delta, SystemState& state, Config
     if (m_currentId == ScreenId::MAIN_MENU && m_mainMenuEditActive) {
         ConfigManager edit_cfg;
         edit_cfg.setConfig(m_mainMenuEdit);
+        const uint8_t idx = m_mainMenuScreen->selectedIndex();
         m_mainMenuScreen->adjustValue(delta, edit_cfg);
         m_mainMenuEdit = edit_cfg.getConfig();
-        m_mainMenuScreen->refresh(*m_tft, edit_cfg);
+        m_mainMenuScreen->refreshItem(*m_tft, idx, edit_cfg);
     }
 }
 
@@ -233,38 +267,60 @@ void DisplayManager::handleUiInput_QuickMenu(UiInput action, int16_t payload, Sy
     }
 }
 
-// Главное меню: Left/Click — сохранить и выйти; Right — отменить; Delta — правка параметра.
+// Главное меню: Up/Down/Left/Right — навигация; Click — сохранить; Power — отменить; Delta — правка.
 void DisplayManager::handleUiInput_MainMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg) {
+    ConfigManager view;
+    if (m_mainMenuEditActive) {
+        view.setConfig(m_mainMenuEdit);
+    }
+
     switch (action) {
         case UiInput::Up:
-            m_mainMenuScreen->selectPrev();
-            if (m_mainMenuEditActive) {
-                ConfigManager view;
-                view.setConfig(m_mainMenuEdit);
-                m_mainMenuScreen->refresh(*m_tft, view);
-            } else {
-                m_mainMenuScreen->refresh(*m_tft, cfg);
-            }
-            break;
         case UiInput::Down:
-            m_mainMenuScreen->selectNext();
+        case UiInput::Left:
+        case UiInput::Right: {
+            const uint8_t oldIndex = m_mainMenuScreen->selectedIndex();
+            if (!m_mainMenuScreen->navigate(action)) {
+                break;
+            }
+            const uint8_t newIndex = m_mainMenuScreen->selectedIndex();
             if (m_mainMenuEditActive) {
-                ConfigManager view;
-                view.setConfig(m_mainMenuEdit);
-                m_mainMenuScreen->refresh(*m_tft, view);
+                m_mainMenuScreen->refreshSelection(*m_tft, oldIndex, newIndex, view);
             } else {
-                m_mainMenuScreen->refresh(*m_tft, cfg);
+                m_mainMenuScreen->refreshSelection(*m_tft, oldIndex, newIndex, cfg);
             }
             break;
+        }
         case UiInput::Delta:
             adjustSelectedItem(static_cast<int8_t>(payload), state, cfg);
             break;
-        case UiInput::Left:
         case UiInput::Click:
+        case UiInput::OpenMainMenu:
             exitMainMenuSave(cfg, state);
             break;
-        case UiInput::Right:
+        case UiInput::Power:
             exitMainMenuDiscard(cfg, state);
+            break;
+        default:
+            break;
+    }
+}
+
+void DisplayManager::handleUiInput_Calibration(UiInput action,
+                                               int16_t payload,
+                                               SystemState& state,
+                                               ConfigManager& cfg) {
+    (void)payload;
+
+    switch (action) {
+        case UiInput::Click:
+            m_calibrationScreen->advanceStep();
+            m_calibrationScreen->refresh(*m_tft);
+            break;
+        case UiInput::OpenMainMenu:
+            m_calibrationScreen->saveToConfig(cfg);
+            state.postReloadKeyboardCalRequest();
+            switchTo(ScreenId::HOME, state, cfg);
             break;
         default:
             break;
@@ -275,13 +331,22 @@ void DisplayManager::handleUiInput(UiInput action,
                                    int16_t payload,
                                    SystemState& state,
                                    ConfigManager& cfg) {
-    if (action == UiInput::OpenMainMenu) {
-        openMainMenu(state, cfg);
+    if (m_currentId == ScreenId::CALIBRATION) {
+        handleUiInput_Calibration(action, payload, state, cfg);
         return;
     }
 
     if (m_currentId == ScreenId::MAIN_MENU) {
-        handleUiInput_MainMenu(action, payload, state, cfg);
+        if (action == UiInput::LongClick){
+            openCalibration(state, cfg);
+        }else{
+            handleUiInput_MainMenu(action, payload, state, cfg);
+        }
+        return;
+    }
+
+    if (action == UiInput::OpenMainMenu) {
+        openMainMenu(state, cfg);
         return;
     }
 

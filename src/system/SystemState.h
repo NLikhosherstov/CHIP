@@ -58,6 +58,11 @@ public:
     uint32_t pwm_frequency_hz = 0;
   };
 
+  struct KeyboardAdcState {
+    uint16_t stable_adc = 4095;
+    bool pressed = false;
+  };
+
   SystemState() = default;
 
   HeatExchangerState getHeatExchangerState() const;
@@ -71,16 +76,25 @@ public:
   struct SystemRequest {
     bool enter_auto = false;    // переход в AUTO из быстрого меню
     bool enter_manual = false;
+    bool enter_calibration = false;
+    bool reload_keyboard_cal = false;
     bool outline_sprite = false;  // debug: draw sprite perimeter when rendering
   };
 
   SystemRequest getRequests() const;
+
+  KeyboardAdcState getKeyboardAdcState() const;
+  void setKeyboardAdcState(uint16_t stable_adc, bool pressed);
  
   void postEnterAutoRequest();
   void postEnterManualRequest();
+  void postEnterCalibrationRequest();
+  void postReloadKeyboardCalRequest();
  
   void clearRequestEnterAuto();
   void clearRequestEnterManual();
+  void clearRequestEnterCalibration();
+  void clearRequestReloadKeyboardCal();
  
   void toggleOutlineSprite();
   bool isOutlineSpriteEnabled() const;
@@ -93,6 +107,8 @@ private:
   friend class PumpController;
   friend class MotorController;
   friend class AutomationController;
+  friend class SerialHandler;
+  friend class InputController;
 
   void setHeatExchangerState(float temperature_c,
                              float temp_rate_c_per_s,
@@ -112,5 +128,6 @@ private:
   PumpState m_pump_state;
   MotorState m_motor_state;
   AutomationState m_automation_state = AutomationState::STATE_IDLE;
+  KeyboardAdcState m_keyboard_adc_state{};
   SystemRequest m_requests{};
 };

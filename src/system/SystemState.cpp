@@ -123,6 +123,32 @@ void SystemState::postEnterManualRequest() {
   interrupts();
 }
 
+void SystemState::postEnterCalibrationRequest() {
+  noInterrupts();
+  m_requests.enter_calibration = true;
+  interrupts();
+}
+
+void SystemState::postReloadKeyboardCalRequest() {
+  noInterrupts();
+  m_requests.reload_keyboard_cal = true;
+  interrupts();
+}
+
+SystemState::KeyboardAdcState SystemState::getKeyboardAdcState() const {
+  noInterrupts();
+  const KeyboardAdcState state = m_keyboard_adc_state;
+  interrupts();
+  return state;
+}
+
+void SystemState::setKeyboardAdcState(uint16_t stable_adc, bool pressed) {
+  noInterrupts();
+  m_keyboard_adc_state.stable_adc = stable_adc;
+  m_keyboard_adc_state.pressed = pressed;
+  interrupts();
+}
+
 SystemState::SystemRequest SystemState::getRequests() const {
   noInterrupts();
   const SystemRequest requests = m_requests;
@@ -139,6 +165,18 @@ void SystemState::clearRequestEnterAuto() {
 void SystemState::clearRequestEnterManual() {
   noInterrupts();
   m_requests.enter_manual = false;
+  interrupts();
+}
+
+void SystemState::clearRequestEnterCalibration() {
+  noInterrupts();
+  m_requests.enter_calibration = false;
+  interrupts();
+}
+
+void SystemState::clearRequestReloadKeyboardCal() {
+  noInterrupts();
+  m_requests.reload_keyboard_cal = false;
   interrupts();
 }
 

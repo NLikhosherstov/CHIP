@@ -8,7 +8,7 @@
 namespace{
   constexpr int EEPROM_STORAGE_ADDRESS = 0;
   constexpr uint8_t STORAGE_ID = 0xD1;
-  constexpr uint8_t STORAGE_VERSION = 1;
+  constexpr uint8_t STORAGE_VERSION = 2;
   constexpr uint8_t CRC8_POLYNOMIAL = 0x07;
 
   template <typename T>
@@ -90,15 +90,19 @@ ConfigManager::Config ConfigManager::sanitize(const Config& config) {
   sanitized.pump_pulse_1         = clampValue<uint16_t>(sanitized.pump_pulse_1, 10, 1000);
   sanitized.pump_pulse_3         = clampValue<uint16_t>(sanitized.pump_pulse_3, 10, 1000);
   sanitized.pump_pulse_4         = clampValue<uint16_t>(sanitized.pump_pulse_4, 10, 1000);
-  sanitized.pumpPerfomance       = clampValue<uint16_t>(sanitized.pumpPerfomance, 10, 1000);
-  sanitized.fuel_correction      = clampValue<int16_t>(sanitized.fuel_correction, -1000, 1000);
-  sanitized.ignitor_timeout_s    = clampValue<uint16_t>(sanitized.ignitor_timeout_s, 10, 600);
-  sanitized.motor_PWM_1          = clampValue<uint8_t>(sanitized.motor_PWM_1, 0, 255);
-  sanitized.motor_PWM_2          = clampValue<uint8_t>(sanitized.motor_PWM_2, 0, 255);
-  sanitized.motor_PWM_3          = clampValue<uint8_t>(sanitized.motor_PWM_3, 0, 255);
-  sanitized.motor_PWM_4          = clampValue<uint8_t>(sanitized.motor_PWM_4, 0, 255);
-  sanitized.target_temperature_c = clampValue<uint8_t>(sanitized.target_temperature_c, 0, 90);
-  sanitized.embededPump          = sanitized.embededPump;
+  sanitized.pumpPerfomance         = clampValue<uint16_t>(sanitized.pumpPerfomance, 10, 1000);
+  sanitized.max_fuel_flow_lph_x10  = clampValue<uint16_t>(sanitized.max_fuel_flow_lph_x10, 1, 100);
+  sanitized.fuel_correction        = clampValue<int16_t>(sanitized.fuel_correction, -1000, 1000);
+  sanitized.ignitor_timeout_s      = clampValue<uint16_t>(sanitized.ignitor_timeout_s, 10, 600);
+  sanitized.motor_PWM_1            = clampValue<uint8_t>(sanitized.motor_PWM_1, 0, 255);
+  sanitized.motor_PWM_2            = clampValue<uint8_t>(sanitized.motor_PWM_2, 0, 255);
+  sanitized.motor_PWM_3            = clampValue<uint8_t>(sanitized.motor_PWM_3, 0, 255);
+  sanitized.motor_PWM_4            = clampValue<uint8_t>(sanitized.motor_PWM_4, 0, 255);
+  sanitized.target_temperature_c   = clampValue<uint8_t>(sanitized.target_temperature_c, 10, 120);
+  sanitized.cooling_target_c       = clampValue<uint8_t>(sanitized.cooling_target_c, 30, 90);
+  sanitized.temperature_hysteresis_c =
+      clampValue<uint8_t>(sanitized.temperature_hysteresis_c, 1, 20);
+  sanitized.embededPump            = sanitized.embededPump;
   return sanitized;
 }
 

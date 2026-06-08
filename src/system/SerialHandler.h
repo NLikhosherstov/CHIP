@@ -26,6 +26,11 @@ private:
   void printConfig() const;
   void printCommandHelp() const;
   void toggleOutlineSprite();
+  bool handleSetCommand(const char* args);
+  void handleSetMode(const char* mode);
+  void handleSetPulse(const char* value);
+  void handleSetSpeed(const char* value);
+  void handleSetIgn(const char* value);
 
   static void rebootToTinyUF2();
   static void restartFirmware();

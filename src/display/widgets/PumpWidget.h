@@ -8,7 +8,7 @@ struct PaletteRGB565;
 
 // Виджет «Насос» — нижний левый угол (подпись + расход). Иконка — PumpIndicator.
 struct PumpWidget {
-    static constexpr int16_t X = 9,  Y = 194;
+    static constexpr int16_t X = 4,  Y = 202;
     static constexpr int16_t W = 85, H = 35;
 
     static constexpr int16_t FLOW_PUSH_X = X;

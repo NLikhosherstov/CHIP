@@ -14,7 +14,7 @@ char s_lastMaxBuf[8] = "";
 bool s_labelDrawn    = false;
 
 static const SpriteScreenRect kScreen = {TimerWidget::VALUES_PUSH_X, TimerWidget::VALUES_PUSH_Y,
-                                         SpriteSlot::Medium};
+                                         SpriteSlot::M};
 }  // namespace
 
 void TimerWidget::draw(TFT_eSPI& tft,
@@ -29,12 +29,13 @@ void TimerWidget::draw(TFT_eSPI& tft,
     tft.fillRect(X, Y, W, H, pal.screenBg);
     tft.endWrite();
 
-    tft.setFreeFont(Font_small);
+    tft.loadFont(smooth_font::small);
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(pal.labelColor, pal.screenBg);
     tft.startWrite();
-    tft.drawString("TIMER", X + W, Y);
+    tft.drawString("ТАЙМЕР", X + W, Y-1);
     tft.endWrite();
+    tft.unloadFont();
     tft.setTextFont(1);
     s_labelDrawn = true;
 
@@ -59,28 +60,29 @@ void TimerWidget::update(TFT_eSPI& tft,
     }
 
     if (!s_labelDrawn) {
-        tft.setFreeFont(Font_small);
+        tft.loadFont(smooth_font::small);
         tft.setTextDatum(TR_DATUM);
         tft.setTextColor(pal.labelColor, pal.screenBg);
         tft.startWrite();
         tft.drawString("TIMER", X + W, Y);
         tft.endWrite();
+        tft.unloadFont();
         tft.setTextFont(1);
         s_labelDrawn = true;
     }
 
-    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::Medium);
+    TFT_eSprite* spr = SpritePool::acquire(SpriteSlot::M);
     if (spr == nullptr) {
         SpritePool::drawOomMarker(tft, kScreen);
         return;
     }
 
     spr->fillSprite(pal.screenBg);
-    spr->setFreeFont(Font_default);
+    spr->loadFont(smooth_font::def);
 
     const int16_t maxW    = spr->textWidth(bufMax);
-    const int16_t spriteW = SpritePool::MEDIUM_W;
-    const int16_t spriteH = SpritePool::MEDIUM_H;
+    const int16_t spriteW = SpritePool::M_W;
+    const int16_t spriteH = SpritePool::M_H;
     const int16_t baseY   = spriteH - 2;
 
     spr->setTextDatum(BR_DATUM);
@@ -90,7 +92,8 @@ void TimerWidget::update(TFT_eSPI& tft,
     spr->setTextColor(pal.valueColor, pal.screenBg);
     spr->drawString(bufCur, spriteW - maxW, baseY);
 
+    spr->unloadFont();
     spr->pushSprite(kScreen.x, kScreen.y);
-    SpritePool::release(SpriteSlot::Medium);
+    SpritePool::release(SpriteSlot::M);
     tft.setTextFont(1);
 }

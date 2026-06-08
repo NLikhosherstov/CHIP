@@ -19,7 +19,21 @@ void InputController::begin() {
 }
 
 void InputController::tick() {
+  const bool cal = m_display.isCalibrationActive();
+  m_hal.setCalibrationMode(cal);
+
   m_hal.tick();
+
+  if (cal) {
+    m_state.setKeyboardAdcState(m_hal.getStableAdc(), m_hal.isKeyPressed());
+  }
+
+  const auto req = m_state.getRequests();
+  if (req.reload_keyboard_cal) {
+    m_state.clearRequestReloadKeyboardCal();
+    m_hal.reloadCalibration(m_config.getConfig());
+    m_hal.setCalibrationMode(m_display.isCalibrationActive());
+  }
 
   RawInputEvent ev{};
   while (m_hal.pop(ev)) {
@@ -70,7 +84,7 @@ bool InputController::mapEncoderToUi(const RawInputEvent& ev, UiInput& out, int1
       payload = 0;
       return true;
     case EncoderMotion::KeyLongPress:
-      out = UiInput::OpenMainMenu;
+      out = UiInput::LongClick;
       payload = 0;
       return true;
     default:
@@ -100,16 +114,14 @@ void InputController::routeAutomation(AutomationCommand cmd, int16_t payload) {
       m_automation.enterManual();
       break;
     case AutomationCommand::SetMotorStep:
-      m_automation.setMotorStep(static_cast<uint8_t>(payload));
+      m_automation.setMotorStep(static_cast<int8_t>(payload));
       break;
     case AutomationCommand::SetPumpEnabled: {
-      m_automation.enterManual();
       const auto pump = m_state.getPumpState();
       m_automation.setPumpEnabled(!pump.enabled);
       break;
     }
     case AutomationCommand::SetIgnitorEnabled: {
-      m_automation.enterManual();
       const auto ign = m_state.getIgnitorState();
       m_automation.setIgnitorEnabled(!ign.enabled);
       break;
@@ -118,9 +130,26 @@ void InputController::routeAutomation(AutomationCommand cmd, int16_t payload) {
 }
 
 void InputController::dispatch(const RawInputEvent& ev) {
-  // Power обрабатывается только автоматикой.
+  // Проверка калибровочного режима
+  if (m_display.isCalibrationActive()) {
+    if (ev.kind == RawInputEvent::Kind::Encoder) {
+      UiInput ui_action{};
+      int16_t payload = 0;
+      if (mapEncoderToUi(ev, ui_action, payload)) {
+        routeUi(ui_action, payload);
+      }
+    }
+    return;
+  }
+
+  // Power: в главном меню — выход без сохранения; иначе — автоматика.
   if (ev.kind == RawInputEvent::Kind::Button) {
     if (ev.button.btn == PhysicalButton::Power) {
+      if (m_display.currentScreen() == DisplayManager::ScreenId::MAIN_MENU &&
+          ev.button.gesture == ButtonGesture::Click) {
+        routeUi(UiInput::Power, 0);
+        return;
+      }
       if (ev.button.gesture == ButtonGesture::LongPress) {
         routeAutomation(AutomationCommand::EmergencyStop);
       } else if (ev.button.gesture == ButtonGesture::Click) {
@@ -135,7 +164,7 @@ void InputController::dispatch(const RawInputEvent& ev) {
     }
   }
 
-  if (ev.kind == RawInputEvent::Kind::Encoder && ev.encoder.motion == EncoderMotion::KeyLongPress) {
+  if (ev.kind == RawInputEvent::Kind::Encoder && ev.encoder.motion == EncoderMotion::KeyClick) {
     routeUi(UiInput::OpenMainMenu, 0);
     return;
   }
@@ -173,7 +202,7 @@ void InputController::dispatch(const RawInputEvent& ev) {
     return;
   }
 
-  if (ui_action == UiInput::Click) {
+  if (ui_action == UiInput::LongClick) {
     if (m_state.getAutomationState() == SystemState::AutomationState::STATE_MANUAL) {
       routeAutomation(AutomationCommand::EnterAuto);
     }
@@ -181,17 +210,9 @@ void InputController::dispatch(const RawInputEvent& ev) {
   }
 
   if (ui_action == UiInput::Delta) {
-    if (m_state.getAutomationState() == SystemState::AutomationState::STATE_MANUAL) {
-      const auto motor = m_state.getMotorState();
-      int16_t step = static_cast<int16_t>(motor.speed_index + 1) + payload;
-      if (step < 1) {
-        step = 1;
-      }
-      if (step > 4) {
-        step = 4;
-      }
-      routeAutomation(AutomationCommand::SetMotorStep, step);
-    }
+    const auto motor = m_state.getMotorState();
+    int16_t step = static_cast<int16_t>(motor.speed_index) + payload;
+    routeAutomation(AutomationCommand::SetMotorStep, step);
     return;
   }
 

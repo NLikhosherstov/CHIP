@@ -12,7 +12,7 @@ public:
 
   void begin();
   void setEnabled(bool enabled);
-  void setStep(uint8_t step_1_to_4);
+  void setStep(int8_t step_0_to_4);
 
 private:
   SystemState& m_state;
