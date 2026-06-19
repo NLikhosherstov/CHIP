@@ -13,18 +13,18 @@ void ModeWidget::draw(TFT_eSPI& tft,
 void ModeWidget::update(TFT_eSPI& tft,
                         SystemState::AutomationState state,
                         const PaletteRGB565& pal) {
-    tft.fillRect(X, 0, W, H+Y, pal.screenBg);
+    tft.fillRect(X, 0, W, H+Y, CLR_BG);
 
     // Название режима
     tft.loadFont(smooth_font::def);
     tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(pal.modeNameColor, pal.screenBg);
+    tft.setTextColor(pal.accentFG, CLR_BG);
     tft.drawString(modeName(state), X, Y);
     tft.unloadFont();
 
     // Подпись
     tft.loadFont(smooth_font::small);
-    tft.setTextColor(pal.labelColor, pal.screenBg);
+    tft.setTextColor(CLR_LABEL, CLR_BG);
     tft.drawString("РЕЖИМ", X, Y + 22);
     tft.unloadFont();
 

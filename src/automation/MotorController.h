@@ -5,13 +5,12 @@
 class SystemState;
 class ConfigManager;
 
-// Управление мотором (ступени 1..4, PWM из конфига).
+// Управление мотором (ступени 0..4, PWM из конфига).
 class MotorController {
 public:
   explicit MotorController(SystemState& state, const ConfigManager& config);
 
   void begin();
-  void setEnabled(bool enabled);
   void setStep(int8_t step_0_to_4);
 
 private:

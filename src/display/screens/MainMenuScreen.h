@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "display/BaseScreen.h"
-#include "display/UiInput.h"
+#include "input/Event.h"
 #include "system/ConfigManager.h"
 
 // Экран главного меню: 2 страницы × 2 колонки × 4 пункта (16 параметров конфига).
@@ -25,7 +25,7 @@ public:
               const SystemState& state,
               const ConfigManager& cfg) override;
 
-    bool navigate(UiInput action);
+    bool navigate(EventType action);
     void refreshSelection(TFT_eSPI& tft, uint8_t oldIndex, uint8_t newIndex,
                           const ConfigManager& cfg);
     void adjustValue(int8_t delta, ConfigManager& cfg);

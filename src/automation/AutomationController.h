@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "input/Event.h"
 #include "automation/IgnitorController.h"
 #include "automation/MotorController.h"
 #include "automation/PumpController.h"
@@ -17,6 +18,7 @@ public:
 
   void begin();
   void tick(uint32_t now_ms);
+  void event(Event& e);
 
   void requestStart();
   void requestStop();
@@ -24,7 +26,7 @@ public:
   void enterAuto();
   void enterManual();
   void setMotorStep(int8_t step_0_to_4);
-  void setPumpEnabled(bool on);
+  void setPumpStep(int8_t step_0_to_4);
   void setIgnitorEnabled(bool on);
 
 private:
@@ -35,4 +37,5 @@ private:
   PumpController m_pump;
   MotorController m_motor;
   IgnitorController m_ignitor;
+  uint8_t m_lastPumpStep = 1;
 };

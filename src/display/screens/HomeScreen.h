@@ -11,7 +11,7 @@ class ConfigManager;
 // Содержит:
 //   — Семь виджетов (CoreWidget, ModeWidget, PumpWidget, SpeedWidget,
 //                    TimerWidget, IgnitionIndicator)
-//   — Встроенный модальный оверлей Быстрого меню (QuickMenu).
+//   — Модальный оверлей Быстрого меню (QuickMenuWidget).
 //
 // Быстрое меню НЕ является отдельным экраном: оно рисуется поверх
 // главного экрана, фоновые виджеты продолжают обновляться в tick().
@@ -67,7 +67,7 @@ private:
     int16_t  m_lastHumDisplay;
     uint8_t  m_lastSpeedIndex;
     uint16_t m_lastTimerSec;
-    uint16_t m_lastPulseHz;
+    uint16_t m_lastCyclePeriodMs;
     bool     m_lastIgnActive;
     bool     m_lastPumpActive;
     bool     m_fullRedrawNeeded;
@@ -97,17 +97,6 @@ private:
 
     // Сброс кеша к текущим значениям состояния
     void resetDirtyCache(const SystemState& state, const ConfigManager& cfg);
-
-    // Отрисовка оверлея Быстрого меню (поверх уже нарисованного фона)
-    void drawQuickMenuOverlay(TFT_eSPI& tft,
-                              const SystemState& state,
-                              const ConfigManager& cfg);
-
-    // Перерисовка одного пункта меню
-    void drawQuickMenuItem(TFT_eSPI& tft,
-                           uint8_t index,
-                           const SystemState& state,
-                           const ConfigManager& cfg);
 
     // Вычисление прошедших секунд работы свечи
     static uint16_t calcIgnitorElapsedSec(const SystemState::IgnitorState& ign,

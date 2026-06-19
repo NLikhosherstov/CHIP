@@ -21,17 +21,18 @@ void TimerWidget::draw(TFT_eSPI& tft,
                        uint16_t elapsedSec,
                        uint16_t maxSec,
                        const PaletteRGB565& pal) {
+    (void)pal;
     s_lastCurBuf[0] = '\0';
     s_lastMaxBuf[0] = '\0';
     s_labelDrawn     = false;
 
     tft.startWrite();
-    tft.fillRect(X, Y, W, H, pal.screenBg);
+    tft.fillRect(X, Y, W, H, CLR_BG);
     tft.endWrite();
 
     tft.loadFont(smooth_font::small);
     tft.setTextDatum(TR_DATUM);
-    tft.setTextColor(pal.labelColor, pal.screenBg);
+    tft.setTextColor(CLR_LABEL, CLR_BG);
     tft.startWrite();
     tft.drawString("ТАЙМЕР", X + W, Y-1);
     tft.endWrite();
@@ -46,6 +47,7 @@ void TimerWidget::update(TFT_eSPI& tft,
                           uint16_t elapsedSec,
                           uint16_t maxSec,
                           const PaletteRGB565& pal) {
+    (void)pal;
     char bufMax[8];
     snprintf(bufMax, sizeof(bufMax), "/%d", static_cast<int>(maxSec));
 
@@ -62,7 +64,7 @@ void TimerWidget::update(TFT_eSPI& tft,
     if (!s_labelDrawn) {
         tft.loadFont(smooth_font::small);
         tft.setTextDatum(TR_DATUM);
-        tft.setTextColor(pal.labelColor, pal.screenBg);
+        tft.setTextColor(CLR_LABEL, CLR_BG);
         tft.startWrite();
         tft.drawString("TIMER", X + W, Y);
         tft.endWrite();
@@ -77,7 +79,7 @@ void TimerWidget::update(TFT_eSPI& tft,
         return;
     }
 
-    spr->fillSprite(pal.screenBg);
+    spr->fillSprite(CLR_BG);
     spr->loadFont(smooth_font::def);
 
     const int16_t maxW    = spr->textWidth(bufMax);
@@ -86,10 +88,10 @@ void TimerWidget::update(TFT_eSPI& tft,
     const int16_t baseY   = spriteH - 2;
 
     spr->setTextDatum(BR_DATUM);
-    spr->setTextColor(pal.valueDimColor, pal.screenBg);
+    spr->setTextColor(CLR_VALUE_DIM, CLR_BG);
     spr->drawString(bufMax, spriteW, baseY);
 
-    spr->setTextColor(pal.valueColor, pal.screenBg);
+    spr->setTextColor(CLR_VALUE, CLR_BG);
     spr->drawString(bufCur, spriteW - maxW, baseY);
 
     spr->unloadFont();

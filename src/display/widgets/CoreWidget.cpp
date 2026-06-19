@@ -66,7 +66,7 @@ void pushCoreIcon(TFT_eSPI& tft,
         return;
     }
 
-    spr->fillSprite(pal.coreRingBgColor);
+    spr->fillSprite(pal.accentBG);
     
     int8_t x_shift = -3;
     int8_t y_shift = 0;
@@ -76,7 +76,7 @@ void pushCoreIcon(TFT_eSPI& tft,
                        icon::medium::font,
                        glyph,
                        color,
-                       pal.coreRingBgColor);
+                       pal.accentBG);
     spr->pushSprite(screen.x, screen.y);
     SpritePool::release(screen.slot);
 }
@@ -116,21 +116,21 @@ void CoreWidget::updateHumidity(TFT_eSPI& tft, float humidity, const PaletteRGB5
 
 void CoreWidget::drawRing(TFT_eSPI& tft, const PaletteRGB565& pal) {
     tft.startWrite();
-    tft.fillCircle(CX, CY, RING_RADIUS - RING_THICK, pal.coreRingBgColor);
-    tft.drawArc(CX, CY, RING_RADIUS, RING_RADIUS - RING_THICK, 0, 360, pal.coreRingColor, pal.coreRingBgColor, true);
+    tft.fillCircle(CX, CY, RING_RADIUS - RING_THICK, pal.accentBG);
+    tft.drawArc(CX, CY, RING_RADIUS, RING_RADIUS - RING_THICK, 0, 360, pal.accentFG, pal.accentBG, true);
     tft.endWrite();
 }
 
 void CoreWidget::drawRoomIcons(TFT_eSPI& tft, const PaletteRGB565& pal) {
     pushCoreIcon(tft, kTempIconScreen,
                  icon::medium::TEMP,
-                 pal.roomTempColor, pal);
+                 CLR_VALUE_DIM, pal);
 }
 
 void CoreWidget::drawHumIcons(TFT_eSPI& tft, const PaletteRGB565& pal) {
     pushCoreIcon(tft, kHumIconScreen,
                  icon::medium::DROPLET_PCT,
-                 pal.humidityColor, pal);
+                 CLR_VALUE_DIM, pal);
 }
 
 void CoreWidget::drawHexText(TFT_eSPI& tft, float temp_c, const PaletteRGB565& pal) {
@@ -147,10 +147,10 @@ void CoreWidget::drawHexText(TFT_eSPI& tft, float temp_c, const PaletteRGB565& p
         return;
     }
 
-    spr->fillSprite(pal.coreRingBgColor);
+    spr->fillSprite(pal.accentBG);
     spr->loadFont(smooth_font::h1);
     spr->setTextDatum(MC_DATUM);
-    spr->setTextColor(pal.hexTempColor, pal.coreRingBgColor);
+    spr->setTextColor(CLR_HEX_TEMP, pal.accentBG);
     const int16_t spriteCx = SpritePool::XL_W / 2 - 3;
     const int16_t spriteCy = SpritePool::XL_H / 2 + 5;
     spr->drawString(buf, spriteCx, spriteCy);
@@ -175,10 +175,10 @@ void CoreWidget::drawRoomText(TFT_eSPI& tft, float temp_c, const PaletteRGB565& 
         return;
     }
 
-    spr->fillSprite(pal.coreRingBgColor);
+    spr->fillSprite(pal.accentBG);
     spr->loadFont(smooth_font::h2);
     spr->setTextDatum(TL_DATUM);
-    spr->setTextColor(pal.roomTempColor, pal.coreRingBgColor);
+    spr->setTextColor(CLR_ROOM, pal.accentBG);
     spr->drawString(buf, 0, 1);
     spr->pushSprite(kRoomScreen.x, kRoomScreen.y);
     spr->unloadFont();
@@ -200,10 +200,10 @@ void CoreWidget::drawHumText(TFT_eSPI& tft, float humidity, const PaletteRGB565&
         return;
     }
 
-    spr->fillSprite(pal.coreRingBgColor);
+    spr->fillSprite(pal.accentBG);
     spr->loadFont(smooth_font::h2);
     spr->setTextDatum(TL_DATUM);
-    spr->setTextColor(pal.humidityColor, pal.coreRingBgColor);
+    spr->setTextColor(CLR_ROOM, pal.accentBG);
     spr->drawString(buf, 0, 1);
     spr->pushSprite(kHumScreen.x, kHumScreen.y);
     spr->unloadFont();

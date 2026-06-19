@@ -48,7 +48,7 @@ public:
   struct PumpState {
     bool enabled = false;
     uint8_t speed_index = 0;
-    uint16_t pulse_hz = 0;
+    uint16_t cycle_period_ms = 0;
   };
 
   struct MotorState {
@@ -117,7 +117,7 @@ private:
                              uint32_t updated_at_ms);
   void setRoomClimateState(float temperature_c, float humidity_percent, bool valid, uint32_t updated_at_ms);
   void setIgnitorState(bool enabled, uint8_t pwm_percent, uint32_t timeout_deadline_ms);
-  void setPumpState(bool enabled, uint8_t speed_index, uint16_t pulse_hz);
+  void setPumpState(bool enabled, uint8_t speed_index, uint16_t cycle_period_ms);
   void setMotorState(bool enabled, uint8_t speed_index, uint16_t pwm_duty_permille, uint32_t pwm_frequency_hz);
   void setAutomationState(AutomationState state);
 

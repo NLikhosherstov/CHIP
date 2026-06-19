@@ -86,11 +86,11 @@ void SystemState::setIgnitorState(bool enabled, uint8_t pwm_percent, uint32_t ti
   interrupts();
 }
 
-void SystemState::setPumpState(bool enabled, uint8_t speed_index, uint16_t pulse_hz) {
+void SystemState::setPumpState(bool enabled, uint8_t speed_index, uint16_t cycle_period_ms) {
   noInterrupts();
   m_pump_state.enabled = enabled;
   m_pump_state.speed_index = speed_index;
-  m_pump_state.pulse_hz = pulse_hz;
+  m_pump_state.cycle_period_ms = cycle_period_ms;
   interrupts();
 }
 

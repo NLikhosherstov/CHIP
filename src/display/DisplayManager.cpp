@@ -220,7 +220,42 @@ void DisplayManager::exitMainMenuDiscard(ConfigManager& cfg, const SystemState& 
     switchTo(ScreenId::HOME, state, cfg);
 }
 
-void DisplayManager::handleUiInput_Home(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg) {
+void DisplayManager::event(Event& e) {
+    if (isCalibrationActive()) {
+        handleUiInput_Calibration(e.type, e.payload, e.state, e.config);
+        e.accept = true;
+        return;
+    }
+
+    if (m_currentId == ScreenId::MAIN_MENU) {
+        if (e.type == EventType::LongClick) {
+            openCalibration(e.state, e.config);
+        } else {
+            handleUiInput_MainMenu(e.type, e.payload, e.state, e.config);
+        }
+        e.accept = true;
+        return;
+    }
+
+    if (isQuickMenuVisible()) {
+        handleUiInput_QuickMenu(e.type, e.payload, e.state, e.config);
+        e.accept = true;
+        return;
+    }
+
+    if (e.type == EventType::Up || e.type == EventType::Down) {
+        handleUiInput_Home(e.type, e.payload, e.state, e.config);
+        e.accept = true;
+        return;
+    }
+
+    if (e.type == EventType::Click) {
+        openMainMenu(e.state, e.config);
+        e.accept = true;
+    }
+}
+
+void DisplayManager::handleUiInput_Home(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg) {
     (void)payload;
 
     if (isQuickMenuVisible()) {
@@ -229,10 +264,10 @@ void DisplayManager::handleUiInput_Home(UiInput action, int16_t payload, SystemS
     }
 
     switch (action) {
-        case UiInput::Up:
+        case EventType::Up:
             openQuickMenu(0, state, cfg);
             break;
-        case UiInput::Down:
+        case EventType::Down:
             openQuickMenu(3, state, cfg);
             break;
         default:
@@ -241,26 +276,23 @@ void DisplayManager::handleUiInput_Home(UiInput action, int16_t payload, SystemS
 }
 
 // Быстрое меню: Up/Down — навигация; Left/Right — выход; Delta — значение; Click — действие по пункту.
-void DisplayManager::handleUiInput_QuickMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg) {
+void DisplayManager::handleUiInput_QuickMenu(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg) {
     switch (action) {
-        case UiInput::Up:
+        case EventType::Up:
             m_homeScreen->quickMenuSelectPrev(*m_tft, state, cfg);
             break;
-        case UiInput::Down:
+        case EventType::Down:
             m_homeScreen->quickMenuSelectNext(*m_tft, state, cfg);
             break;
-        case UiInput::Left:
-        case UiInput::Right:
+        case EventType::Left:
+        case EventType::Right:
             closeQuickMenu(state, cfg);
             break;
-        case UiInput::Delta:
+        case EventType::Delta:
             adjustSelectedItem(static_cast<int8_t>(payload), state, cfg);
             break;
-        case UiInput::Click:
+        case EventType::Click:
             applyClickToSelectedItem(state, cfg);
-            break;
-        case UiInput::OpenMainMenu:
-            openMainMenu(state, cfg);
             break;
         default:
             break;
@@ -268,17 +300,17 @@ void DisplayManager::handleUiInput_QuickMenu(UiInput action, int16_t payload, Sy
 }
 
 // Главное меню: Up/Down/Left/Right — навигация; Click — сохранить; Power — отменить; Delta — правка.
-void DisplayManager::handleUiInput_MainMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg) {
+void DisplayManager::handleUiInput_MainMenu(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg) {
     ConfigManager view;
     if (m_mainMenuEditActive) {
         view.setConfig(m_mainMenuEdit);
     }
 
     switch (action) {
-        case UiInput::Up:
-        case UiInput::Down:
-        case UiInput::Left:
-        case UiInput::Right: {
+        case EventType::Up:
+        case EventType::Down:
+        case EventType::Left:
+        case EventType::Right: {
             const uint8_t oldIndex = m_mainMenuScreen->selectedIndex();
             if (!m_mainMenuScreen->navigate(action)) {
                 break;
@@ -291,14 +323,13 @@ void DisplayManager::handleUiInput_MainMenu(UiInput action, int16_t payload, Sys
             }
             break;
         }
-        case UiInput::Delta:
+        case EventType::Delta:
             adjustSelectedItem(static_cast<int8_t>(payload), state, cfg);
             break;
-        case UiInput::Click:
-        case UiInput::OpenMainMenu:
+        case EventType::Click:
             exitMainMenuSave(cfg, state);
             break;
-        case UiInput::Power:
+        case EventType::Power:
             exitMainMenuDiscard(cfg, state);
             break;
         default:
@@ -306,18 +337,18 @@ void DisplayManager::handleUiInput_MainMenu(UiInput action, int16_t payload, Sys
     }
 }
 
-void DisplayManager::handleUiInput_Calibration(UiInput action,
+void DisplayManager::handleUiInput_Calibration(EventType action,
                                                int16_t payload,
                                                SystemState& state,
                                                ConfigManager& cfg) {
     (void)payload;
 
     switch (action) {
-        case UiInput::Click:
+        case EventType::Click:
             m_calibrationScreen->advanceStep();
             m_calibrationScreen->refresh(*m_tft);
             break;
-        case UiInput::OpenMainMenu:
+        case EventType::LongClick:
             m_calibrationScreen->saveToConfig(cfg);
             state.postReloadKeyboardCalRequest();
             switchTo(ScreenId::HOME, state, cfg);
@@ -325,30 +356,4 @@ void DisplayManager::handleUiInput_Calibration(UiInput action,
         default:
             break;
     }
-}
-
-void DisplayManager::handleUiInput(UiInput action,
-                                   int16_t payload,
-                                   SystemState& state,
-                                   ConfigManager& cfg) {
-    if (m_currentId == ScreenId::CALIBRATION) {
-        handleUiInput_Calibration(action, payload, state, cfg);
-        return;
-    }
-
-    if (m_currentId == ScreenId::MAIN_MENU) {
-        if (action == UiInput::LongClick){
-            openCalibration(state, cfg);
-        }else{
-            handleUiInput_MainMenu(action, payload, state, cfg);
-        }
-        return;
-    }
-
-    if (action == UiInput::OpenMainMenu) {
-        openMainMenu(state, cfg);
-        return;
-    }
-
-    handleUiInput_Home(action, payload, state, cfg);
 }

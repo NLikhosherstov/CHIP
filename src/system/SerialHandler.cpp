@@ -233,7 +233,7 @@ void SerialHandler::printPump() const {
   const auto s = m_state.getPumpState();
   printLabelBool(F("enabled             - "), s.enabled);
   printLabelInt( F("speed_index         - "), s.speed_index);
-  printLabelUInt(F("pulse_hz            - "), s.pulse_hz);
+  printLabelUInt(F("cycle_period_ms     - "), s.cycle_period_ms);
 }
 
 void SerialHandler::printMotor() const {
@@ -317,7 +317,7 @@ void SerialHandler::printCommandHelp() const {
   Serial.println(F("  outline - toggle sprite perimeter outline when rendering"));
   Serial.println(F("  restart - firmware restart"));
   Serial.println(F("  set mode IDLE|AUTO|MANUAL|STOP - set automation mode"));
-  Serial.println(F("  set pulse <int>                - set pump pulse_hz"));
+  Serial.println(F("  set pulse <int>                - set pump cycle_period_ms"));
   Serial.println(F("  set speed 0-4                  - set pump/motor speed_index"));
   Serial.println(F("  set ign 0-1                    - set ignitor enabled"));
   Serial.println(F("  help    - this list"));
@@ -365,15 +365,15 @@ void SerialHandler::handleSetMode(const char* mode) {
 
 void SerialHandler::handleSetPulse(const char* value) {
   char* end = nullptr;
-  const long pulse_hz = strtol(value, &end, 10);
-  if (end == value || *end != '\0' || pulse_hz < 0 || pulse_hz > UINT16_MAX) {
+  const long cycle_period_ms = strtol(value, &end, 10);
+  if (end == value || *end != '\0' || cycle_period_ms < 0 || cycle_period_ms > UINT16_MAX) {
     Serial.println(F("Expected: set pulse <0..65535>"));
     return;
   }
 
   const auto pump = m_state.getPumpState();
-  const uint16_t pulse = static_cast<uint16_t>(pulse_hz);
-  m_state.setPumpState(static_cast<bool>(pulse), pump.speed_index, pulse);
+  const uint16_t period = static_cast<uint16_t>(cycle_period_ms);
+  m_state.setPumpState(static_cast<bool>(period), pump.speed_index, period);
   printPump();
 }
 
@@ -390,7 +390,7 @@ void SerialHandler::handleSetSpeed(const char* value) {
   const uint8_t index = static_cast<uint8_t>(speed_index);
   const bool enabled = static_cast<bool>(index);
 
-  m_state.setPumpState(enabled, index, pump.pulse_hz);
+  m_state.setPumpState(enabled, index, pump.cycle_period_ms);
   m_state.setMotorState(enabled, index, motor.pwm_duty_permille, motor.pwm_frequency_hz);
   printPump();
   Serial.println();

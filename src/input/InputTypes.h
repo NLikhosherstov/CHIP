@@ -42,15 +42,3 @@ struct RawInputEvent {
     } encoder;
   };
 };
-
-// Команды автоматике (только с главного экрана без активного меню).
-enum class AutomationCommand : uint8_t {
-  StartAlgorithm,   // Power: старт из IDLE
-  StopAlgorithm,    // Power: останов
-  EmergencyStop,    // Power: длинное нажатие
-  EnterAuto,        // клик энкодера в РУ
-  EnterManual,      // прямой переход в ручной режим
-  SetMotorStep,     // payload: ступень 1..4
-  SetPumpEnabled,   // toggle насоса
-  SetIgnitorEnabled // toggle свечи
-};

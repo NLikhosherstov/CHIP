@@ -99,14 +99,14 @@ void MainMenuScreen::tick(TFT_eSPI& tft,
     (void)tft;
 }
 
-bool MainMenuScreen::navigate(UiInput action) {
+bool MainMenuScreen::navigate(EventType action) {
     const uint8_t oldIndex = m_selectedIndex;
     uint8_t page = itemPage(m_selectedIndex);
     uint8_t col  = itemCol(m_selectedIndex);
     uint8_t row  = itemRow(m_selectedIndex);
 
     switch (action) {
-        case UiInput::Up:
+        case EventType::Up:
             if (row == 0) {
                 row = 3;
                 page ^= 1;
@@ -114,7 +114,7 @@ bool MainMenuScreen::navigate(UiInput action) {
                 --row;
             }
             break;
-        case UiInput::Down:
+        case EventType::Down:
             if (row == 3) {
                 row = 0;
                 page ^= 1;
@@ -122,13 +122,13 @@ bool MainMenuScreen::navigate(UiInput action) {
                 ++row;
             }
             break;
-        case UiInput::Left:
+        case EventType::Left:
             if (col == 0) {
                 return false;
             }
             col = 0;
             break;
-        case UiInput::Right:
+        case EventType::Right:
             if (col == 1) {
                 return false;
             }
@@ -362,7 +362,7 @@ void MainMenuScreen::drawHeader(TFT_eSPI& tft) {
                        icon::small::BOX_H / 2,
                        icon::small::font,
                        icon::small::POWER_OFF,
-                       CLR_IGN_ICON_BG,
+                       CLR_IGN_ICON,
                        CLR_BG);
                        
     tft.loadFont(smooth_font::small);

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#include "display/UiInput.h"
+#include "input/Event.h"
 #include "system/ConfigManager.h"
 
 class TFT_eSPI;
@@ -11,7 +11,7 @@ class HomeScreen;
 class MainMenuScreen;
 class CalibrationScreen;
 
-// Главный контроллер дисплея и интерпретатор семантического ввода (UiInput).
+// Главный контроллер дисплея и обработчик UI-событий (Event).
 class DisplayManager {
 public:
     enum class ScreenId : uint8_t {
@@ -35,21 +35,17 @@ public:
 
     static bool needsKeyboardCalibration(const ConfigManager& cfg);
 
-    // Быстрое меню или экран настроек — весь ввод через handleUiInput.
     bool isMenuActive() const;
     bool isCalibrationActive() const;
     bool isQuickMenuVisible() const;
 
-    void handleUiInput(UiInput action,
-                       int16_t payload,
-                       SystemState& state,
-                       ConfigManager& cfg);
+    void event(Event& e);
 
 private:
-    void handleUiInput_Home(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
-    void handleUiInput_QuickMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
-    void handleUiInput_MainMenu(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
-    void handleUiInput_Calibration(UiInput action, int16_t payload, SystemState& state, ConfigManager& cfg);
+    void handleUiInput_Home(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg);
+    void handleUiInput_QuickMenu(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg);
+    void handleUiInput_MainMenu(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg);
+    void handleUiInput_Calibration(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg);
 
     void openQuickMenu(uint8_t default_item, const SystemState& state, const ConfigManager& cfg);
     void closeQuickMenu(const SystemState& state, const ConfigManager& cfg);
