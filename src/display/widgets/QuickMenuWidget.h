@@ -45,7 +45,6 @@ struct QuickMenuWidget {
 private:
     static uint8_t m_lastTargetTemp;
     static int16_t m_lastFuelCorrection;
-    static SystemState::AutomationState m_lastAutomationState;
 
     static void formatItemValue(uint8_t index, const SystemState& state,
                                 const ConfigManager::Config& conf,

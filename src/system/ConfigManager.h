@@ -26,17 +26,17 @@ public:
     // Максимальный расход топлива, десятые л/ч (22 = 2.2 л/ч)
     uint16_t max_fuel_flow_lph_x10 = 22;
 
-    // Общая коррекция подачи топлива(изменение интервала импульсов на заданную величину)
+    // Общая коррекция подачи топлива(изменение интервала импульсов на заданный процент)
     int16_t  fuel_correction      = 0;
 
     // Максимальное время работы свечи накала между включениями
     uint16_t ignitor_timeout_s    = 60;
 
-    // Ступенчатая регулировка скорости двигателя ШИМ-255
-    uint8_t  motor_PWM_1          = 153;
-    uint8_t  motor_PWM_2          = 180;
-    uint8_t  motor_PWM_3          = 220;
-    uint8_t  motor_PWM_4          = 254;
+    // Ступенчатая регулировка скорости двигателя, permille (1000 = 100%)
+    uint16_t motor_PWM_1          = 550;
+    uint16_t motor_PWM_2          = 700;
+    uint16_t motor_PWM_3          = 850;
+    uint16_t motor_PWM_4          = 1000;
 
     // Температура термостатирования
     uint8_t  target_temperature_c = 25;
@@ -54,7 +54,7 @@ public:
 
   struct __attribute__((__packed__)) PersistentStorage{
     uint8_t id = 0xD1;   // Device ID
-    uint8_t version = 2; // Версия структуры настроек
+    uint8_t version = 3; // Версия структуры настроек
     Config  config;      // Сама структура настроек
     uint8_t crc8 = 0;    // Контрольная сумма
   };
@@ -71,11 +71,12 @@ public:
 
   void resetToDefaults();
 
+  ConfigManager::PersistentStorage buildPersistentStorage() const;
+
 private:
   static Config sanitize(const Config& config);
   static uint8_t calculateCrc8(const PersistentStorage& storage);
   static bool isValidStorage(const PersistentStorage& storage);
-
 
 private:
   PersistentStorage m_storage{};

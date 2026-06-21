@@ -13,7 +13,8 @@ public:
   ~PumpController();
 
   void begin();
-  void setStep(int8_t step_0_to_4);
+  void setStep(int8_t step);
+  void refreshTiming();
 
 private:
   enum class Phase : uint8_t { Stopped, On, Off };

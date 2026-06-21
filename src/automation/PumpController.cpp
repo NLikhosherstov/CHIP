@@ -13,8 +13,8 @@ constexpr uint16_t PUMP_PULSE_ON_MS = 45;
 constexpr uint16_t MIN_CYCLE_MS = PUMP_PULSE_ON_MS + 1;
 constexpr uint16_t MAX_CYCLE_MS = 1000;
 
-uint16_t baseCycleMsForStep(const ConfigManager::Config& conf, uint8_t step_0_to_4) {
-  switch (step_0_to_4) {
+uint16_t baseCycleMsForStep(const ConfigManager::Config& conf, uint8_t step) {
+  switch (step) {
     case 1:
       return conf.pump_pulse_1;
     case 2:
@@ -28,19 +28,19 @@ uint16_t baseCycleMsForStep(const ConfigManager::Config& conf, uint8_t step_0_to
   }
 }
 
-uint16_t effectiveCycleMs(const ConfigManager::Config& conf, uint8_t step_0_to_4) {
-  if (step_0_to_4 == 0) {
+uint16_t effectiveCycleMs(const ConfigManager::Config& conf, uint8_t step) {
+  if (step == 0) {
     return 0;
   }
 
-  const uint16_t base = baseCycleMsForStep(conf, step_0_to_4);
-  int32_t corrected = static_cast<int32_t>(base) * (100 + conf.fuel_correction) / 100;
-  if (corrected < MIN_CYCLE_MS) {
-    corrected = MIN_CYCLE_MS;
-  }
-  if (corrected > MAX_CYCLE_MS) {
-    corrected = MAX_CYCLE_MS;
-  }
+  const uint16_t base = baseCycleMsForStep(conf, step);
+  int32_t safe_correction = conf.fuel_correction;
+  if (safe_correction < -50) safe_correction = -50; 
+
+  int32_t corrected = (static_cast<int32_t>(base) * 100) / (100 + safe_correction);
+  if (corrected < MIN_CYCLE_MS) corrected = MIN_CYCLE_MS;
+  if (corrected > MAX_CYCLE_MS) corrected = MAX_CYCLE_MS;
+
   return static_cast<uint16_t>(corrected);
 }
 
@@ -75,19 +75,30 @@ void PumpController::begin() {
   setStep(0);
 }
 
-void PumpController::setStep(int8_t step_0_to_4) {
-  const uint8_t step = (step_0_to_4 < 0) ? 0 : (step_0_to_4 > 4) ? 4 : step_0_to_4;
-  const bool enabled = (step != 0);
-  m_cycle_ms = enabled ? effectiveCycleMs(m_config.getConfig(), step) : 0;
+void PumpController::setStep(int8_t step) {
+  const uint8_t clampStep = (step < 0) ? 0 : (step > 4) ? 4 : step;
+  const bool enabled = (clampStep != 0);
+  m_cycle_ms = enabled ? effectiveCycleMs(m_config.getConfig(), clampStep) : 0;
   m_pause_ms = enabled ? static_cast<uint16_t>(m_cycle_ms - PUMP_PULSE_ON_MS) : 0;
 
-  m_state.setPumpState(enabled, step, m_cycle_ms);
+  m_state.setPumpState(enabled, clampStep, m_cycle_ms);
 
   if (!enabled) {
     stopSequencer();
   } else if (!m_running) {
     startSequencer();
   }
+}
+
+void PumpController::refreshTiming() {
+  const auto pump = m_state.getPumpState();
+  if (pump.speed_index == 0) {
+    return;
+  }
+
+  m_cycle_ms = effectiveCycleMs(m_config.getConfig(), pump.speed_index);
+  m_pause_ms = static_cast<uint16_t>(m_cycle_ms - PUMP_PULSE_ON_MS);
+  m_state.setPumpState(true, pump.speed_index, m_cycle_ms);
 }
 
 void PumpController::startSequencer() {

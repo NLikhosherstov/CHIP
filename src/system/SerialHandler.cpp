@@ -194,7 +194,7 @@ void SerialHandler::printWelcomeMessage() const {
   Serial.println(F("Config loading status:"));
 
   if (m_config.isLoaded()) {
-    Serial.println(F("  - SUCCESS: User config loaded from Flash/EEPROM."));
+    Serial.println(F("  - SUCCESS: User config loaded from flash config store."));
     if (m_config.getConfig().btnPower == 0) {
       Serial.println(F("  - KBD: Calibration required!"));
     }
@@ -289,10 +289,10 @@ void SerialHandler::printConfig() const {
 
   Serial.println();
   Serial.println(F("--- Motor ---"));
-  printLabelInt( F("motor_PWM_1    - "), cfg.motor_PWM_1);
-  printLabelInt( F("motor_PWM_2    - "), cfg.motor_PWM_2);
-  printLabelInt( F("motor_PWM_3    - "), cfg.motor_PWM_3);
-  printLabelInt( F("motor_PWM_4    - "), cfg.motor_PWM_4);
+  printLabelUInt(F("motor_PWM_1    - "), cfg.motor_PWM_1);
+  printLabelUInt(F("motor_PWM_2    - "), cfg.motor_PWM_2);
+  printLabelUInt(F("motor_PWM_3    - "), cfg.motor_PWM_3);
+  printLabelUInt(F("motor_PWM_4    - "), cfg.motor_PWM_4);
 
   Serial.println();
   Serial.println(F("--- Other ---"));

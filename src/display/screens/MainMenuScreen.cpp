@@ -47,8 +47,10 @@ static const char* const LABELS[MainMenuScreen::ITEM_COUNT] = {
     "Интервал импульса 4",
 };
 
-int16_t pwmToPercent(uint8_t pwm) {
-    return static_cast<int16_t>((static_cast<uint16_t>(pwm) * 100u + 127u) / 255u);
+constexpr uint16_t kMotorPwmEditStepPermille = 10;
+
+int16_t permilleToPercent(uint16_t permille) {
+    return static_cast<int16_t>((permille + 5u) / 10u);
 }
 
 void getItemScreenPos(uint8_t index, int16_t& outX, int16_t& outY) {
@@ -215,23 +217,27 @@ void MainMenuScreen::adjustValue(int8_t delta, ConfigManager& cfg) {
             break;
         }
         case 8: {
-            const int16_t v = static_cast<int16_t>(conf.motor_PWM_1) + delta;
-            conf.motor_PWM_1 = static_cast<uint8_t>((v < 0) ? 0 : (v > 255) ? 255 : v);
+            const int32_t step = static_cast<int32_t>(delta) * kMotorPwmEditStepPermille;
+            const int32_t v = static_cast<int32_t>(conf.motor_PWM_1) + step;
+            conf.motor_PWM_1 = static_cast<uint16_t>((v < 0) ? 0 : (v > 1000) ? 1000 : v);
             break;
         }
         case 9: {
-            const int16_t v = static_cast<int16_t>(conf.motor_PWM_2) + delta;
-            conf.motor_PWM_2 = static_cast<uint8_t>((v < 0) ? 0 : (v > 255) ? 255 : v);
+            const int32_t step = static_cast<int32_t>(delta) * kMotorPwmEditStepPermille;
+            const int32_t v = static_cast<int32_t>(conf.motor_PWM_2) + step;
+            conf.motor_PWM_2 = static_cast<uint16_t>((v < 0) ? 0 : (v > 1000) ? 1000 : v);
             break;
         }
         case 10: {
-            const int16_t v = static_cast<int16_t>(conf.motor_PWM_3) + delta;
-            conf.motor_PWM_3 = static_cast<uint8_t>((v < 0) ? 0 : (v > 255) ? 255 : v);
+            const int32_t step = static_cast<int32_t>(delta) * kMotorPwmEditStepPermille;
+            const int32_t v = static_cast<int32_t>(conf.motor_PWM_3) + step;
+            conf.motor_PWM_3 = static_cast<uint16_t>((v < 0) ? 0 : (v > 1000) ? 1000 : v);
             break;
         }
         case 11: {
-            const int16_t v = static_cast<int16_t>(conf.motor_PWM_4) + delta;
-            conf.motor_PWM_4 = static_cast<uint8_t>((v < 0) ? 0 : (v > 255) ? 255 : v);
+            const int32_t step = static_cast<int32_t>(delta) * kMotorPwmEditStepPermille;
+            const int32_t v = static_cast<int32_t>(conf.motor_PWM_4) + step;
+            conf.motor_PWM_4 = static_cast<uint16_t>((v < 0) ? 0 : (v > 1000) ? 1000 : v);
             break;
         }
         case 12: {
@@ -307,16 +313,16 @@ void MainMenuScreen::formatItemValue(uint8_t index,
             snprintf(buf, bufSize, "%luс", static_cast<unsigned long>(conf.ignitor_timeout_s));
             break;
         case 8:
-            snprintf(buf, bufSize, "%d%%", pwmToPercent(conf.motor_PWM_1));
+            snprintf(buf, bufSize, "%d%%", permilleToPercent(conf.motor_PWM_1));
             break;
         case 9:
-            snprintf(buf, bufSize, "%d%%", pwmToPercent(conf.motor_PWM_2));
+            snprintf(buf, bufSize, "%d%%", permilleToPercent(conf.motor_PWM_2));
             break;
         case 10:
-            snprintf(buf, bufSize, "%d%%", pwmToPercent(conf.motor_PWM_3));
+            snprintf(buf, bufSize, "%d%%", permilleToPercent(conf.motor_PWM_3));
             break;
         case 11:
-            snprintf(buf, bufSize, "%d%%", pwmToPercent(conf.motor_PWM_4));
+            snprintf(buf, bufSize, "%d%%", permilleToPercent(conf.motor_PWM_4));
             break;
         case 12:
             snprintf(buf, bufSize, "%u мс", conf.pump_pulse_1);

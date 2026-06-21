@@ -16,7 +16,8 @@ void AutomationController::begin() {
   m_state.setAutomationState(SystemState::AutomationState::STATE_IDLE);
 }
 
-void AutomationController::tick(uint32_t /*now_ms*/) {
+void AutomationController::tick(uint32_t now_ms) {
+  m_motor.tick(now_ms);
   processRequests();
 }
 
@@ -80,6 +81,10 @@ void AutomationController::processRequests() {
     enterManual();
     m_state.clearRequestEnterManual();
   }
+  if (req.refresh_pump_timing) {
+    m_pump.refreshTiming();
+    m_state.clearRequestRefreshPumpTiming();
+  }
 }
 
 void AutomationController::requestStart() {
@@ -99,7 +104,7 @@ void AutomationController::requestStop() {
 
 void AutomationController::emergencyStop() {
   m_pump.setStep(0);
-  m_motor.setStep(0);
+  m_motor.stopImmediate();
   m_ignitor.setEnabled(false);
   m_state.setAutomationState(SystemState::AutomationState::STATE_STOP);
 }
@@ -115,23 +120,23 @@ void AutomationController::enterManual() {
   m_state.setAutomationState(SystemState::AutomationState::STATE_MANUAL);
 }
 
-void AutomationController::setMotorStep(int8_t step_0_to_4) {
+void AutomationController::setMotorStep(int8_t step) {
   const auto pump = m_state.getPumpState();
   const auto motor = m_state.getMotorState();
   bool isSync = pump.speed_index == motor.speed_index;
-  bool isMotorStart = ( motor.speed_index == 0 && step_0_to_4 );
+  bool isMotorStart = ( motor.speed_index == 0 && step );
   
-  m_motor.setStep(step_0_to_4);
+  m_motor.setStep(step);
   
   // Синхронно меняем скорость насоса если он включен,
   // и находится в режиме синхронной работы с мотором
   // или производится старт двигателя с включенным насосом
   if(pump.enabled && (isSync || isMotorStart))
-    m_pump.setStep(step_0_to_4);
+    m_pump.setStep(step);
 }
 
-void AutomationController::setPumpStep(int8_t step_0_to_4) {
-  m_pump.setStep(step_0_to_4);
+void AutomationController::setPumpStep(int8_t step) {
+  m_pump.setStep(step);
 }
 
 void AutomationController::setIgnitorEnabled(bool on) {

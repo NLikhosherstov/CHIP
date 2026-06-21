@@ -57,6 +57,7 @@ public:
                          ConfigManager& cfg);
 
     bool isQuickMenuVisible() const;
+    bool isQuickMenuTimedOut() const;
     uint8_t quickMenuSelectedItem() const { return m_qmSelectedItem; }  // для Click в DisplayManager
 
 private:

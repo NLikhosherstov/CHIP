@@ -135,6 +135,12 @@ void SystemState::postReloadKeyboardCalRequest() {
   interrupts();
 }
 
+void SystemState::postRefreshPumpTimingRequest() {
+  noInterrupts();
+  m_requests.refresh_pump_timing = true;
+  interrupts();
+}
+
 SystemState::KeyboardAdcState SystemState::getKeyboardAdcState() const {
   noInterrupts();
   const KeyboardAdcState state = m_keyboard_adc_state;
@@ -177,6 +183,12 @@ void SystemState::clearRequestEnterCalibration() {
 void SystemState::clearRequestReloadKeyboardCal() {
   noInterrupts();
   m_requests.reload_keyboard_cal = false;
+  interrupts();
+}
+
+void SystemState::clearRequestRefreshPumpTiming() {
+  noInterrupts();
+  m_requests.refresh_pump_timing = false;
   interrupts();
 }
 

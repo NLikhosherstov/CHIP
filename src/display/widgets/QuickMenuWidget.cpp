@@ -14,7 +14,7 @@ static constexpr int16_t  QM_ITEM_PAD_X = 14;
 
 static const char* const QM_LABELS[QuickMenuWidget::ITEM_COUNT] = {
     "Уст. Темп.",
-    "Насос",
+    "Коррекция подачи",
     "Режим АВТО",
     "Меню",
 };
@@ -23,8 +23,6 @@ static const char* const QM_LABELS[QuickMenuWidget::ITEM_COUNT] = {
 
 uint8_t QuickMenuWidget::m_lastTargetTemp = 0;
 int16_t QuickMenuWidget::m_lastFuelCorrection = 0;
-SystemState::AutomationState QuickMenuWidget::m_lastAutomationState =
-    SystemState::AutomationState::STATE_IDLE;
 
 void QuickMenuWidget::draw(TFT_eSPI& tft, uint8_t selectedItem,
                             const SystemState& state, const ConfigManager& cfg) {
@@ -96,6 +94,8 @@ void QuickMenuWidget::resetDirtyCache(uint8_t selectedItem,
 void QuickMenuWidget::formatItemValue(uint8_t index, const SystemState& state,
                                        const ConfigManager::Config& conf,
                                        char* buf, size_t bufSize) {
+    (void)state;
+
     switch (index) {
         case 0:
             snprintf(buf, bufSize, "%d°С", conf.target_temperature_c);
@@ -103,13 +103,7 @@ void QuickMenuWidget::formatItemValue(uint8_t index, const SystemState& state,
         case 1:
             snprintf(buf, bufSize, "%d", conf.fuel_correction);
             break;
-        case 2: {
-            // const auto s = state.getAutomationState();
-            // const bool isAuto = (s == SystemState::AutomationState::STATE_AUTO_START ||
-            //                      s == SystemState::AutomationState::STATE_AUTO_TSTAT);
-            // snprintf(buf, bufSize, isAuto ? "Aвто" : "Ручной");
-            // break;
-        }
+        case 2:
         case 3:
         default:
             buf[0] = '\0';
@@ -120,6 +114,7 @@ void QuickMenuWidget::formatItemValue(uint8_t index, const SystemState& state,
 bool QuickMenuWidget::selectedItemValueChanged(uint8_t selectedItem,
                                                 const SystemState& state,
                                                 const ConfigManager& cfg) {
+    (void)state;
     const auto& conf = cfg.getConfig();
 
     switch (selectedItem) {
@@ -127,8 +122,6 @@ bool QuickMenuWidget::selectedItemValueChanged(uint8_t selectedItem,
             return conf.target_temperature_c != m_lastTargetTemp;
         case 1:
             return conf.fuel_correction != m_lastFuelCorrection;
-        case 2:
-            return state.getAutomationState() != m_lastAutomationState;
         default:
             return false;
     }
@@ -136,11 +129,11 @@ bool QuickMenuWidget::selectedItemValueChanged(uint8_t selectedItem,
 
 void QuickMenuWidget::syncDirtyCache(uint8_t selectedItem,
                                       const SystemState& state, const ConfigManager& cfg) {
+    (void)state;
     const auto& conf = cfg.getConfig();
 
-    m_lastTargetTemp      = conf.target_temperature_c;
-    m_lastFuelCorrection  = conf.fuel_correction;
-    m_lastAutomationState = state.getAutomationState();
+    m_lastTargetTemp     = conf.target_temperature_c;
+    m_lastFuelCorrection = conf.fuel_correction;
 
     (void)selectedItem;
 }

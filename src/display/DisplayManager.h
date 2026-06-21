@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#include <Arduino.h>
+
 #include "input/Event.h"
 #include "system/ConfigManager.h"
 
@@ -24,7 +26,9 @@ public:
     ~DisplayManager();
 
     void begin(const SystemState& state, const ConfigManager& cfg);
-    void tick(SystemState& state, const ConfigManager& cfg);
+    void beginMaintenance(const __FlashStringHelper* message);
+    void endMaintenance();
+    void tick(SystemState& state, ConfigManager& cfg);
 
     void switchTo(ScreenId id, const SystemState& state, const ConfigManager& cfg);
 
@@ -48,9 +52,9 @@ private:
     void handleUiInput_Calibration(EventType action, int16_t payload, SystemState& state, ConfigManager& cfg);
 
     void openQuickMenu(uint8_t default_item, const SystemState& state, const ConfigManager& cfg);
-    void closeQuickMenu(const SystemState& state, const ConfigManager& cfg);
-    void openMainMenu(const SystemState& state, const ConfigManager& cfg);
-    void openCalibration(const SystemState& state, const ConfigManager& cfg);
+    void closeQuickMenu(const SystemState& state, ConfigManager& cfg);
+    void openMainMenu(const SystemState& state, ConfigManager& cfg);
+    void openCalibration(const SystemState& state, ConfigManager& cfg);
 
     void adjustSelectedItem(int8_t delta, SystemState& state, ConfigManager& cfg);
     void applyClickToSelectedItem(SystemState& state, ConfigManager& cfg);
@@ -59,6 +63,8 @@ private:
     void exitMainMenuDiscard(ConfigManager& cfg, const SystemState& state);
 
     bool isQuickMenuModeItemVisible(const SystemState& state) const;
+
+    void initTft();
 
     TFT_eSPI*      m_tft;
     BaseScreen*    m_active;
@@ -71,4 +77,7 @@ private:
     ConfigManager::Config m_mainMenuEdit{};      // черновик правок в MAIN_MENU
     ConfigManager::Config m_mainMenuSnapshot{};  // снимок при входе в меню
     bool m_mainMenuEditActive;
+
+    ConfigManager::Config m_quickMenuSnapshot{};  // снимок при открытии быстрого меню
+    bool m_quickMenuActive;
 };

@@ -61,11 +61,7 @@ void HomeScreen::tick(TFT_eSPI& tft,
     updateDirtyWidgets(tft, state, cfg);
 
     if (m_qmVisible) {
-        if (millis() - m_qmLastActivityMs >= QM_TIMEOUT_MS) {
-            hideQuickMenu(tft, state, cfg);
-        } else {
-            QuickMenuWidget::updateDirty(tft, m_qmSelectedItem, state, cfg);
-        }
+        QuickMenuWidget::updateDirty(tft, m_qmSelectedItem, state, cfg);
     }
 }
 
@@ -146,7 +142,7 @@ void HomeScreen::quickMenuAdjust(TFT_eSPI& tft,
         case 1: {
             const int16_t newVal = static_cast<int16_t>(conf.fuel_correction) + delta;
             conf.fuel_correction = static_cast<int16_t>(
-                (newVal < -1000) ? -1000 : (newVal > 1000) ? 1000 : newVal);
+                (newVal < -50) ? -50 : (newVal > 50) ? 50 : newVal);
             changed = true;
             break;
         }
@@ -163,6 +159,9 @@ void HomeScreen::quickMenuAdjust(TFT_eSPI& tft,
 
     if (changed) {
         cfg.setConfig(conf);
+        if (m_qmSelectedItem == 1) {
+            state.postRefreshPumpTimingRequest();
+        }
     }
 
     QuickMenuWidget::refreshItem(tft, m_qmSelectedItem, m_qmSelectedItem, state, cfg);
@@ -171,6 +170,10 @@ void HomeScreen::quickMenuAdjust(TFT_eSPI& tft,
 
 bool HomeScreen::isQuickMenuVisible() const {
     return m_qmVisible;
+}
+
+bool HomeScreen::isQuickMenuTimedOut() const {
+    return m_qmVisible && (millis() - m_qmLastActivityMs >= QM_TIMEOUT_MS);
 }
 
 void HomeScreen::drawAll(TFT_eSPI& tft,

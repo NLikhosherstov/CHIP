@@ -4,6 +4,7 @@
 #include "input/InputController.h"
 #include "sensors/Max31855Sensor.h"
 #include "sensors/Dht22Sensor.h"
+#include "system/FlashConfigStore.h"
 #include "system/SerialHandler.h"
 #include "system/SystemState.h"
 #include "system/ConfigManager.h"
@@ -29,20 +30,25 @@ void setup() {
   pinMode(pin::IGNITOR, OUTPUT); digitalWrite(pin::IGNITOR, LOW);
   pinMode(pin::PUMP,    OUTPUT); digitalWrite(pin::PUMP,    LOW);
 
-  // while (!Serial) {
-  //   digitalWrite(PC13, !digitalRead(PC13));
-  //   delay(100);
-  // }
+  FlashConfigStore& flash_store = FlashConfigStore::instance();
+  flash_store.begin();
 
   const bool config_loaded = g_cfg.load();
   (void)config_loaded;
+
+  g_display = new DisplayManager();
+
+  if (flash_store.needsCompaction()) {
+    g_display->beginMaintenance(F("Оптимизация памяти..."));
+    flash_store.compact(g_cfg.buildPersistentStorage());
+    g_display->endMaintenance();
+  }
 
   g_heat_sensor.begin();
   // g_heat_sensor.setTracingEnabled(true);
 
   g_room_sensor.begin();
-  
-  g_display = new DisplayManager();
+
   g_display->begin(g_state, g_cfg);
 
   g_automation = new AutomationController(g_state, g_cfg);

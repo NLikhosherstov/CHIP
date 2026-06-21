@@ -5,12 +5,25 @@
 
 #include "display/BaseScreen.h"
 #include "display/PaletteRGB565.h"
+#include "display/assets/fonts.h"
 #include "display/screens/CalibrationScreen.h"
 #include "display/screens/HomeScreen.h"
 #include "display/screens/MainMenuScreen.h"
 #include "display/SpritePool.h"
 #include "pins.h"
+#include "system/SerialProfile.h"
 #include "system/SystemState.h"
+#include "assets/fonts.h"
+
+namespace {
+
+bool quickMenuConfigChanged(const ConfigManager::Config& snapshot,
+                            const ConfigManager::Config& live) {
+    return snapshot.target_temperature_c != live.target_temperature_c ||
+           snapshot.fuel_correction != live.fuel_correction;
+}
+
+}  // namespace
 
 DisplayManager::DisplayManager()
     : m_tft(new TFT_eSPI())
@@ -19,7 +32,8 @@ DisplayManager::DisplayManager()
     , m_homeScreen(new HomeScreen())
     , m_mainMenuScreen(new MainMenuScreen())
     , m_calibrationScreen(new CalibrationScreen())
-    , m_mainMenuEditActive(false) {}
+    , m_mainMenuEditActive(false)
+    , m_quickMenuActive(false) {}
 
 DisplayManager::~DisplayManager() {
     delete m_homeScreen;
@@ -34,12 +48,32 @@ bool DisplayManager::needsKeyboardCalibration(const ConfigManager& cfg) {
            c.btnPump == 0 && c.btnDown == 0;
 }
 
-void DisplayManager::begin(const SystemState& state, const ConfigManager& cfg) {
+void DisplayManager::initTft() {
     pinMode(pin::DISPLAY_LIGHT, OUTPUT);
     backlightOff();
 
     m_tft->setRotation(3);
     m_tft->init();
+}
+
+void DisplayManager::beginMaintenance(const __FlashStringHelper* message) {
+    initTft();
+    m_tft->fillScreen(CLR_BG);
+    m_tft->loadFont(smooth_font::small);
+    m_tft->setTextDatum(MC_DATUM);
+    m_tft->setTextColor(CLR_VALUE, CLR_BG);
+    m_tft->drawString(message, m_tft->width() / 2, m_tft->height() / 2);
+    m_tft->unloadFont();
+    m_tft->setTextFont(1);
+    backlightOn();
+}
+
+void DisplayManager::endMaintenance() {
+    m_tft->fillScreen(CLR_BG);
+}
+
+void DisplayManager::begin(const SystemState& state, const ConfigManager& cfg) {
+    initTft();
     m_tft->fillScreen(CLR_BG);
 
     backlightOn();
@@ -53,7 +87,7 @@ void DisplayManager::begin(const SystemState& state, const ConfigManager& cfg) {
     }
 }
 
-void DisplayManager::tick(SystemState& state, const ConfigManager& cfg) {
+void DisplayManager::tick(SystemState& state, ConfigManager& cfg) {
     const auto req = state.getRequests();
     if (req.enter_calibration) {
         state.clearRequestEnterCalibration();
@@ -62,6 +96,10 @@ void DisplayManager::tick(SystemState& state, const ConfigManager& cfg) {
 
     if (m_active) {
         m_active->tick(*m_tft, state, cfg);
+    }
+
+    if (isQuickMenuVisible() && m_homeScreen->isQuickMenuTimedOut()) {
+        closeQuickMenu(state, cfg);
     }
 }
 
@@ -146,21 +184,31 @@ void DisplayManager::openQuickMenu(uint8_t default_item, const SystemState& stat
     if (storage >= HomeScreen::QM_ITEM_COUNT) {
         storage = HomeScreen::QM_ITEM_COUNT - 1;
     }
+    m_quickMenuSnapshot = cfg.getConfig();
+    m_quickMenuActive = true;
     m_homeScreen->showQuickMenu(*m_tft, state, cfg, storage);
 }
 
-void DisplayManager::closeQuickMenu(const SystemState& state, const ConfigManager& cfg) {
-    if (m_currentId == ScreenId::HOME) {
-        m_homeScreen->hideQuickMenu(*m_tft, state, cfg);
+void DisplayManager::closeQuickMenu(const SystemState& state, ConfigManager& cfg) {
+    if (m_currentId != ScreenId::HOME) {
+        return;
     }
+
+    if (m_quickMenuActive) {
+        if (quickMenuConfigChanged(m_quickMenuSnapshot, cfg.getConfig())) {
+            cfg.save();
+        }
+        m_quickMenuActive = false;
+    }
+    m_homeScreen->hideQuickMenu(*m_tft, state, cfg);
 }
 
-void DisplayManager::openMainMenu(const SystemState& state, const ConfigManager& cfg) {
+void DisplayManager::openMainMenu(const SystemState& state, ConfigManager& cfg) {
     closeQuickMenu(state, cfg);
     switchTo(ScreenId::MAIN_MENU, state, cfg);
 }
 
-void DisplayManager::openCalibration(const SystemState& state, const ConfigManager& cfg) {
+void DisplayManager::openCalibration(const SystemState& state, ConfigManager& cfg) {
     closeQuickMenu(state, cfg);
     switchTo(ScreenId::CALIBRATION, state, cfg);
 }

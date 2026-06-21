@@ -78,6 +78,7 @@ public:
     bool enter_manual = false;
     bool enter_calibration = false;
     bool reload_keyboard_cal = false;
+    bool refresh_pump_timing = false;
     bool outline_sprite = false;  // debug: draw sprite perimeter when rendering
   };
 
@@ -90,12 +91,14 @@ public:
   void postEnterManualRequest();
   void postEnterCalibrationRequest();
   void postReloadKeyboardCalRequest();
- 
+  void postRefreshPumpTimingRequest();
+
   void clearRequestEnterAuto();
   void clearRequestEnterManual();
   void clearRequestEnterCalibration();
   void clearRequestReloadKeyboardCal();
- 
+  void clearRequestRefreshPumpTiming();
+
   void toggleOutlineSprite();
   bool isOutlineSpriteEnabled() const;
 
