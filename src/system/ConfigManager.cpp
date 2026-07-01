@@ -63,7 +63,6 @@ ConfigManager::PersistentStorage ConfigManager::buildPersistentStorage() const {
 
 bool ConfigManager::load() {
   FlashConfigStore& store = FlashConfigStore::instance();
-  store.begin();
 
   if (store.load(m_storage)) {
     m_storage.config = sanitize(m_storage.config);
@@ -86,6 +85,14 @@ void ConfigManager::resetToDefaults() {
   m_storage.version = STORAGE_VERSION;
   m_storage.config = Config{};
   m_storage.crc8 = calculateCrc8(m_storage);
+}
+
+bool ConfigManager::needsCompaction() const {
+  return FlashConfigStore::instance().needsCompaction();
+}
+
+bool ConfigManager::compact(){
+  return FlashConfigStore::instance().compact(buildPersistentStorage());
 }
 
 ConfigManager::Config ConfigManager::sanitize(const Config& config) {

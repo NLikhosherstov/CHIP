@@ -71,6 +71,10 @@ public:
 
   void resetToDefaults();
 
+  //Проверка свободного места под хранилище конфигурации
+  bool needsCompaction() const;
+  bool compact();
+
   ConfigManager::PersistentStorage buildPersistentStorage() const;
 
 private:

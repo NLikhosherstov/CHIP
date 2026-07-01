@@ -15,6 +15,16 @@ public:
   bool needsCompaction() const;
   bool compact(const ConfigManager::PersistentStorage& latest);
 
+  // Объём сектора flash, выделенного под хранение конфигурации (байт).
+  static uint32_t sectorCapacityBytes();
+  // Размер одной записи конфигурации в логе (байт).
+  static uint32_t recordSizeBytes();
+
+  // Число валидных записей конфигурации в секторе.
+  uint32_t recordCount() const;
+  // Число свободных слотов под запись конфигурации до отказа appendRecord (сектор заполнен).
+  uint32_t freeRecordSlots() const;
+
 private:
   FlashConfigStore() = default;
 

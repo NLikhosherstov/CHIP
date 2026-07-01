@@ -25,6 +25,7 @@ private:
   void printAutomationMode() const;
   void printConfig() const;
   void printCommandHelp() const;
+  void handleCfgStore(const char* args);
   void toggleOutlineSprite();
   bool handleSetCommand(const char* args);
   void handleSetMode(const char* mode);

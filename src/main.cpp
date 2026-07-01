@@ -4,7 +4,6 @@
 #include "input/InputController.h"
 #include "sensors/Max31855Sensor.h"
 #include "sensors/Dht22Sensor.h"
-#include "system/FlashConfigStore.h"
 #include "system/SerialHandler.h"
 #include "system/SystemState.h"
 #include "system/ConfigManager.h"
@@ -30,17 +29,15 @@ void setup() {
   pinMode(pin::IGNITOR, OUTPUT); digitalWrite(pin::IGNITOR, LOW);
   pinMode(pin::PUMP,    OUTPUT); digitalWrite(pin::PUMP,    LOW);
 
-  FlashConfigStore& flash_store = FlashConfigStore::instance();
-  flash_store.begin();
-
+  g_display = new DisplayManager();
+  
   const bool config_loaded = g_cfg.load();
   (void)config_loaded;
 
-  g_display = new DisplayManager();
-
-  if (flash_store.needsCompaction()) {
+  if (g_cfg.needsCompaction()) {
+    //Выделенная память заканчивается, очищаем сектор и записываем текущий 
     g_display->beginMaintenance(F("Оптимизация памяти..."));
-    flash_store.compact(g_cfg.buildPersistentStorage());
+    g_cfg.compact();
     g_display->endMaintenance();
   }
 

@@ -7,30 +7,41 @@
 #include <string.h>
 
 #ifndef FLASH_CONFIG_BASE
+// Базовый адрес сектора flash для хранения конфигурации (Sector 7 на STM32F411).
 #define FLASH_CONFIG_BASE 0x08060000UL
 #endif
 
 #ifndef FLASH_CONFIG_SECTOR
+// Номер сектора flash, зарезервированного под конфигурацию.
 #define FLASH_CONFIG_SECTOR FLASH_SECTOR_7
 #endif
 
 namespace {
 
 constexpr uint32_t kSectorBase = FLASH_CONFIG_BASE;
+// Размер сектора конфигурации: 128 КБ.
 constexpr uint32_t kSectorSize = 128U * 1024U;
 
+// Магия записи: ASCII «HC» (Heater CHIP).
 constexpr uint16_t kRecordMagic = 0x4843U;
+// Маркер валидной (не стёртой) записи.
 constexpr uint8_t kRecordStateValid = 0xA5U;
+// Версия формата записи в flash (обёртка вокруг PersistentStorage).
 constexpr uint8_t kRecordFormatVersion = 1U;
+// Полный размер одной записи в логе: заголовок + payload, выровнен до 64 байт.
 constexpr size_t kRecordSize = 64U;
+// Размер заголовка записи (magic, state, seq, crc, …).
 constexpr size_t kRecordHeaderSize = 12U;
-constexpr size_t kCompactThreshold = 8U * kRecordSize;
+// Минимальный запас свободного места в секторе; при меньшем остатке вызовется compact() при следующей загрузке.
+constexpr size_t kCompactThreshold = 100U * kRecordSize;
 
+// Ожидаемые поля PersistentStorage при проверке CRC.
 constexpr uint8_t kStorageId = 0xD1U;
 constexpr uint8_t kStorageVersion = 3U;
 constexpr uint8_t kCrc8Polynomial = 0x07U;
 
 #ifndef FLASH_FLAG_ALL_ERRORS
+// Маска флагов ошибок flash для очистки перед программированием.
 #define FLASH_FLAG_ALL_ERRORS                                                                 \
   (FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |                \
    FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR)
@@ -228,8 +239,6 @@ void FlashConfigStore::scan() {
 }
 
 bool FlashConfigStore::load(ConfigManager::PersistentStorage& out) {
-  PROFILE_SCOPE("FlashConfigLoad");
-
   uint32_t best_seq = 0;
   bool found_valid = false;
 
@@ -264,6 +273,7 @@ bool FlashConfigStore::load(ConfigManager::PersistentStorage& out) {
   }
 
   scan();
+  m_initialized = true;
   return found_valid;
 }
 
@@ -310,13 +320,8 @@ bool FlashConfigStore::appendRecord(const ConfigManager::PersistentStorage& stor
 }
 
 bool FlashConfigStore::save(const ConfigManager::PersistentStorage& storage) {
-  PROFILE_SCOPE("FlashConfigSave");
-
   if (!m_initialized) {
     begin();
-  }
-  if (needsCompaction()) {
-    return false;
   }
 
   const uint32_t seq = m_last_seq + 1U;
@@ -367,4 +372,39 @@ bool FlashConfigStore::compact(const ConfigManager::PersistentStorage& latest) {
   }
 
   return true;
+}
+
+uint32_t FlashConfigStore::sectorCapacityBytes() {
+  return kSectorSize;
+}
+
+uint32_t FlashConfigStore::recordSizeBytes() {
+  return static_cast<uint32_t>(kRecordSize);
+}
+
+uint32_t FlashConfigStore::recordCount() const {
+  uint32_t count = 0;
+
+  for (uint32_t offset = 0; offset + kRecordSize <= kSectorSize; offset += kRecordSize) {
+    const uint8_t* record_bytes =
+        reinterpret_cast<const uint8_t*>(kSectorBase + offset);
+
+    if (isRecordErased(record_bytes)) {
+      break;
+    }
+
+    if (invalidReason(record_bytes) == InvalidReason::None) {
+      ++count;
+    }
+  }
+
+  return count;
+}
+
+uint32_t FlashConfigStore::freeRecordSlots() const {
+  if (m_next_offset + kRecordSize > kSectorSize) {
+    return 0;
+  }
+
+  return (kSectorSize - m_next_offset) / static_cast<uint32_t>(kRecordSize);
 }

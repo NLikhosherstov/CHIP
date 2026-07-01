@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "system/ConfigManager.h"
+#include "system/FlashConfigStore.h"
 #include "system/SystemState.h"
 
 namespace {
@@ -146,6 +147,12 @@ void SerialHandler::processLine(char* line) {
       printCommandHelp();
       printCommandSeparator();
     }
+    return;
+  }
+
+  if (strncmp(line, "cfg_store", 9) == 0) {
+    handleCfgStore(line + 9);
+    printCommandSeparator();
     return;
   }
 
@@ -302,6 +309,56 @@ void SerialHandler::printConfig() const {
   printLabelInt( F("temperature_hysteresis_c - "), cfg.temperature_hysteresis_c);
 }
 
+void SerialHandler::handleCfgStore(const char* args) {
+  while (*args == ' ' || *args == '\t') {
+    ++args;
+  }
+
+  FlashConfigStore& store = FlashConfigStore::instance();
+
+  if (strncmp(args, "fill", 4) == 0) {
+    args += 4;
+    while (*args == ' ' || *args == '\t') {
+      ++args;
+    }
+
+    if (*args == '\0') {
+      Serial.println(F("Expected: cfg_store fill <count>"));
+      return;
+    }
+
+    char* end = nullptr;
+    const long count = strtol(args, &end, 10);
+    if (end == args || *end != '\0' || count <= 0 || count > 10000) {
+      Serial.println(F("Expected: cfg_store fill <1..10000>"));
+      return;
+    }
+
+    uint32_t saved = 0;
+    for (long i = 0; i < count; ++i) {
+      if (!m_config.save()) {
+        break;
+      }
+      ++saved;
+    }
+
+    Serial.print(F("cfg_store fill: saved "));
+    Serial.print(saved);
+    Serial.print(F(" / "));
+    Serial.println(count);
+    if (saved < static_cast<uint32_t>(count)) {
+      Serial.println(F("cfg_store fill: stopped (sector full)"));
+    }
+  }
+
+  Serial.print(F("cfg_store: capacity="));
+  Serial.print(FlashConfigStore::sectorCapacityBytes());
+  Serial.print(F(" B, records="));
+  Serial.print(store.recordCount());
+  Serial.print(F(", free_slots="));
+  Serial.println(store.freeRecordSlots());
+}
+
 void SerialHandler::printCommandHelp() const {
   Serial.println(F("Commands:"));
   Serial.println(F("  BOOT    - reboot into TinyUF2 bootloader (used by uf2conv upload script)"));
@@ -313,6 +370,8 @@ void SerialHandler::printCommandHelp() const {
   Serial.println(F("  motor   - motor state"));
   Serial.println(F("  mode    - automation mode (IDLE/AUTO/MANUAL/STOP)"));
   Serial.println(F("  cfg     - configuration by category"));
+  Serial.println(F("  cfg_store        - flash config store: capacity, records, free_slots"));
+  Serial.println(F("  cfg_store fill N - append current config N times (test)"));
   Serial.println(F("  calibrate - enter keyboard calibration screen"));
   Serial.println(F("  outline - toggle sprite perimeter outline when rendering"));
   Serial.println(F("  restart - firmware restart"));
